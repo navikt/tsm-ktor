@@ -12,16 +12,19 @@ repositories {
 }
 
 dependencies {
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.test.mock)
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.kotest.assertions)
     testImplementation(libs.junit.jupiter.engine)
-
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    // This dependency is exported to consumers, that is to say found on their compile classpath.
-    api(libs.commons.math3)
+    api(platform(libs.ktor.bom))
+    api(libs.ktor.client.core)
+    api(libs.otel.annotations)
 
-    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation(libs.guava)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.jackson)
 }
 
 java {
