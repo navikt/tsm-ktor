@@ -16,6 +16,8 @@ import io.ktor.serialization.jackson.jackson
 import io.opentelemetry.instrumentation.annotations.SpanAttribute
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.tsm.ktor.logger
+import no.nav.tsm.ktor.nais.RuntimeCluster
+import no.nav.tsm.ktor.nais.getRuntimeCluster
 
 class TexasClient(
     httpClient: HttpClient,
@@ -36,7 +38,7 @@ class TexasClient(
     suspend fun entraIdToken(
         @SpanAttribute("namespace") namespace: String,
         @SpanAttribute("api") app: String,
-        @SpanAttribute("cluster") cluster: TargetCluster = this.inferredCluster
+        @SpanAttribute("cluster") cluster: RuntimeCluster = this.inferredCluster
     ): TexasToken {
         val target = "api://${cluster.nais}.$namespace.$app/.default"
         val requestBody = TokenRequest(identityProvider = "entra_id", target = target)

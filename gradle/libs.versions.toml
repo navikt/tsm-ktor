@@ -9,6 +9,7 @@ junit-jupiter-engine = "6.0.1"
 ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
 ktor-client-core = { module = "io.ktor:ktor-client-core" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation" }
+ktor-server-di = { module = "io.ktor:ktor-server-di", version.ref = "ktor" }
 ktor-serialization-jackson = { module = "io.ktor:ktor-serialization-jackson" }
 otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "otel" }
 

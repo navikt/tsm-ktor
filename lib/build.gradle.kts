@@ -21,6 +21,7 @@ dependencies {
 
     api(platform(libs.ktor.bom))
     api(libs.ktor.client.core)
+    api(libs.ktor.server.di)
     api(libs.otel.annotations)
 
     implementation(libs.ktor.client.content.negotiation)
