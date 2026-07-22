@@ -1,8 +1,13 @@
+import com.diffplug.gradle.spotless.SpotlessExtension
+import org.gradle.kotlin.dsl.check
+import org.gradle.kotlin.dsl.invoke
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-library`
 
     id("maven-publish")
+    alias(libs.plugins.spotless)
 }
 
 version = file("version").readText().trim()
@@ -37,6 +42,16 @@ java {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+tasks {
+    configure<SpotlessExtension> {
+        kotlin { ktfmt("0.62").kotlinlangStyle() }
+        check {
+            dependsOn("spotlessApply")
+        }
+    }
+
 }
 
 val generateVersionFile =

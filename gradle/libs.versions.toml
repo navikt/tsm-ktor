@@ -4,6 +4,7 @@ ktor = "3.4.0"
 otel = "2.29.0"
 kotest-assertions = "6.2.2"
 junit-jupiter-engine = "6.0.1"
+spotless = "8.8.0"
 
 [libraries]
 ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
@@ -23,3 +24,4 @@ kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref =
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

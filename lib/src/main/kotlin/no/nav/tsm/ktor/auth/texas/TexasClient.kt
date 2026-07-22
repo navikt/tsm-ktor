@@ -21,7 +21,7 @@ import no.nav.tsm.ktor.nais.getRuntimeCluster
 
 class TexasClient(
     httpClient: HttpClient,
-    private val config: TexasConfiguration = TexasConfiguration()
+    private val config: TexasConfiguration = TexasConfiguration(),
 ) {
     private val logger = logger()
     private val inferredCluster = getRuntimeCluster()
@@ -38,7 +38,7 @@ class TexasClient(
     suspend fun entraIdToken(
         @SpanAttribute("namespace") namespace: String,
         @SpanAttribute("api") app: String,
-        @SpanAttribute("cluster") cluster: RuntimeCluster = this.inferredCluster
+        @SpanAttribute("cluster") cluster: RuntimeCluster = this.inferredCluster,
     ): TexasToken {
         val target = "api://${cluster.nais}.$namespace.$app/.default"
         val requestBody = TokenRequest(identityProvider = "entra_id", target = target)

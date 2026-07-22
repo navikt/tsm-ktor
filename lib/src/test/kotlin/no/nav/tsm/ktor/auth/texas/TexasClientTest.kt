@@ -13,14 +13,16 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlinx.coroutines.test.runTest
+import no.nav.tsm.ktor.nais.RuntimeCluster
 
 class TexasClientTest {
-    private val defaultTexasConfig = TexasConfiguration(
-        tokenEndpoint = "https://texas.example.com/token",
-        introspectionEndpoint = "https://texas.example.com/introspect"
-    )
+    private val defaultTexasConfig =
+        TexasConfiguration(
+            tokenEndpoint = "https://texas.example.com/token",
+            introspectionEndpoint = "https://texas.example.com/introspect",
+        )
 
     private val texasResponseMapper =
         jacksonObjectMapper().apply {
@@ -48,10 +50,9 @@ class TexasClientTest {
             )
         }
 
-        val texas =
-            TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
+        val texas = TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
 
-        val response = texas.entraIdToken("tsm", "tsm-pdl-cache", TargetCluster.PROD)
+        val response = texas.entraIdToken("tsm", "tsm-pdl-cache", RuntimeCluster.PROD)
         response.token shouldEqual "ay.aeuheu"
     }
 
@@ -76,8 +77,7 @@ class TexasClientTest {
             )
         }
 
-        val texas =
-            TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
+        val texas = TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
 
         val response = texas.maskinporten("nhn:scoperino nhn:pepperino")
         response.token shouldEqual "ay.aeuheu"
