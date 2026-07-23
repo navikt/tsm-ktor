@@ -15,7 +15,6 @@ import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
 import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
-import no.nav.tsm.ktor.nais.RuntimeCluster
 
 class TexasClientTest {
     private val defaultTexasConfig =
@@ -52,7 +51,7 @@ class TexasClientTest {
 
         val texas = TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
 
-        val response = texas.entraIdToken("tsm", "tsm-pdl-cache", RuntimeCluster.PROD)
+        val response = texas.entraIdToken("tsm", "tsm-pdl-cache", TexasTarget.PROD)
         response.token shouldEqual "ay.aeuheu"
     }
 
