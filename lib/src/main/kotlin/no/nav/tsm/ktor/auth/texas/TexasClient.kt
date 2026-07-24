@@ -13,6 +13,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.http.isTextType
 import io.ktor.serialization.jackson.jackson
+import io.opentelemetry.api.trace.Span
 import io.opentelemetry.instrumentation.annotations.SpanAttribute
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.tsm.ktor.logger
@@ -33,14 +34,17 @@ class TexasClient(
         }
     }
 
-    @WithSpan("Texas.naisToken")
+    @WithSpan("texas.entra")
     suspend fun entraIdToken(
-        @SpanAttribute("namespace") namespace: String,
-        @SpanAttribute("api") app: String,
-        @SpanAttribute("cluster") cluster: TexasTarget = this.inferredCluster.toTexasTarget(),
+        @SpanAttribute("target.namespace") namespace: String,
+        @SpanAttribute("target.api") app: String,
+        cluster: TexasTarget = this.inferredCluster.toTexasTarget(),
     ): TexasToken {
+        val span = Span.current()
         val target = "api://${cluster.nais}.$namespace.$app/.default"
         val requestBody = TokenRequest(identityProvider = "entra_id", target = target)
+
+        span.setAttribute("target.scope", target)
 
         val response =
             texasHttpClient.post(config.tokenEndpoint) {
@@ -57,8 +61,8 @@ class TexasClient(
         return TexasToken(body.accessToken)
     }
 
-    @WithSpan("Texas.maskinporten")
-    suspend fun maskinporten(@SpanAttribute("scopes") scopes: String): TexasToken {
+    @WithSpan("texas.maskinporten")
+    suspend fun maskinporten(@SpanAttribute("target.scopes") scopes: String): TexasToken {
         val requestBody = TokenRequest(identityProvider = "maskinporten", target = scopes)
 
         val response =
