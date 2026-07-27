@@ -6,7 +6,7 @@ enum class RuntimeCluster(val nais: String) {
     PROD("prod-gcp"),
 }
 
-internal fun getRuntimeCluster(): RuntimeCluster {
+fun getRuntimeCluster(): RuntimeCluster {
     val env = System.getenv("NAIS_CLUSTER_NAME") ?: "local"
 
     return when (env) {
