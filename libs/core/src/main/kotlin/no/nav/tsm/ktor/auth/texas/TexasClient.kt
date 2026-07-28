@@ -38,10 +38,11 @@ class TexasClient(
     suspend fun entraIdToken(
         @SpanAttribute("target.namespace") namespace: String,
         @SpanAttribute("target.api") app: String,
-        cluster: TexasTarget = this.inferredCluster.toTexasTarget(),
+        cluster: TexasTarget? = null,
     ): TexasToken {
         val span = Span.current()
-        val target = "api://${cluster.nais}.$namespace.$app/.default"
+        val actualCluster = cluster ?: this.inferredCluster.toTexasTarget()
+        val target = "api://${actualCluster.nais}.$namespace.$app/.default"
         val requestBody = TokenRequest(identityProvider = "entra_id", target = target)
 
         span.setAttribute("target.scope", target)
