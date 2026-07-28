@@ -40,9 +40,7 @@ class PluginTest {
 
     @Test
     fun `autoStub should automatically install stub`() = testApplication {
-        install(EntraAuth) {
-            autoStub = true
-        }
+        install(EntraAuth) { autoStub = true }
 
         routing {
             authenticate(ENTRA_MACHINE_TOKEN) { get("/test") { call.respondText("Authenticated") } }
@@ -67,5 +65,4 @@ class PluginTest {
 
         response.status shouldEqual HttpStatusCode.OK
     }
-
 }

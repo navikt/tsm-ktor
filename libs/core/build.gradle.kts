@@ -18,12 +18,14 @@ dependencies {
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.logback.classic)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     api(platform(ktorLibs.bom))
     api(ktorLibs.client.core)
     api(ktorLibs.server.di)
     api(libs.otel.annotations)
+    api(libs.slf4j)
 
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.serialization.jackson)
