@@ -1,5 +1,7 @@
 package no.nav.tsm.ktor.auth.entra
 
+internal const val ENTRA_ON_BEHALF_OF = "tsm-ktor-entra-obo-auth"
+
 internal const val ENTRA_MACHINE_TOKEN = "tsm-ktor-entra-m2m-auth"
 
 class EntraAuthConfig {
@@ -23,6 +25,19 @@ class EntraAuthConfig {
         set(value) {
             _jwksUri = value
         }
+
+    /**
+     * Enables EntraID machine token validation and allows you to use entraMachineToken { ... } to
+     * protect your routes
+     */
+    var machine: Boolean = false
+
+    /**
+     * Enables EntraID on-behalf-of token validation and allows you to use entraOnBehalfOf { ... }
+     * to protect your routes on behalf of a user, also lets you get the users principal from the
+     * Ktor route 'call'.
+     */
+    var obo: Boolean = false
 
     /**
      * Set this to true if you want to automatically stub the auth locally.
