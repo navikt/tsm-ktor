@@ -1,4 +1,4 @@
-name: Release Syk Zara library
+name: Release tsm-ktor libs
 on:
   push:
     paths:
