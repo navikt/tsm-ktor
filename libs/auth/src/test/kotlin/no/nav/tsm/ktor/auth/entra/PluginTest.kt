@@ -37,4 +37,35 @@ class PluginTest {
             startApplication()
         }
     }
+
+    @Test
+    fun `autoStub should automatically install stub`() = testApplication {
+        install(EntraAuth) {
+            autoStub = true
+        }
+
+        routing {
+            authenticate(ENTRA_MACHINE_TOKEN) { get("/test") { call.respondText("Authenticated") } }
+        }
+
+        val client = createClient {}
+        val response = client.get("/test")
+
+        response.status shouldEqual HttpStatusCode.OK
+    }
+
+    @Test
+    fun `StubbedEntraAuth plugin should stub`() = testApplication {
+        install(StubbedEntraAuth)
+
+        routing {
+            authenticate(ENTRA_MACHINE_TOKEN) { get("/test") { call.respondText("Authenticated") } }
+        }
+
+        val client = createClient {}
+        val response = client.get("/test")
+
+        response.status shouldEqual HttpStatusCode.OK
+    }
+
 }

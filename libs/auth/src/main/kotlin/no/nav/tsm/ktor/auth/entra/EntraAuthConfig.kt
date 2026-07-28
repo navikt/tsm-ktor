@@ -23,6 +23,13 @@ class EntraAuthConfig {
         set(value) {
             _jwksUri = value
         }
+
+    /**
+     * Set this to true if you want to automatically stub the auth locally.
+     *
+     * This is based on the presence and value of NAIS_CLUSTER_NAME (injected by nais)
+     */
+    var autoStub: Boolean = false
 }
 
 private fun getEnv(env: ExpectedEnvs): String {
