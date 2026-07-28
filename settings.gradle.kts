@@ -19,3 +19,4 @@ dependencyResolutionManagement {
 rootProject.name = "tsm-ktor"
 
 include(":libs:core")
+include(":libs:auth")
