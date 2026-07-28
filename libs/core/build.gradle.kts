@@ -10,27 +10,23 @@ plugins {
     alias(libs.plugins.spotless)
 }
 
-version = file("version").readText().trim()
-
-repositories {
-    mavenCentral()
-}
+version = file("../version").readText().trim()
 
 dependencies {
-    testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.ktor.client.test.mock)
+    testImplementation(ktorLibs.server.testHost)
+    testImplementation(ktorLibs.client.mock)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.junit.jupiter.engine)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    api(platform(libs.ktor.bom))
-    api(libs.ktor.client.core)
-    api(libs.ktor.server.di)
+    api(platform(ktorLibs.bom))
+    api(ktorLibs.client.core)
+    api(ktorLibs.server.di)
     api(libs.otel.annotations)
 
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.jackson)
+    implementation(ktorLibs.client.contentNegotiation)
+    implementation(ktorLibs.serialization.jackson)
 }
 
 java {

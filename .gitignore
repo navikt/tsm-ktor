@@ -9,3 +9,6 @@ build
 
 # IDEs
 .idea
+
+# This is used only to bake the current version into the library, and should never be updated
+libs/version

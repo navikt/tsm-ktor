@@ -8,5 +8,5 @@ if [ -z "$TAG" ]; then
 fi
 
 VERSION=${TAG#v}
-echo -n "$VERSION" > lib/version
-echo "Set version $VERSION in lib/version"
+echo -n "$VERSION" > libs/version
+echo "Set version $VERSION in libs/version"

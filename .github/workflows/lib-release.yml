@@ -63,6 +63,6 @@ jobs:
         run: |
           ./scripts/create-release.sh
           ./scripts/set-version.sh
-          ./gradlew publish
+          ./gradlew publishAll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
