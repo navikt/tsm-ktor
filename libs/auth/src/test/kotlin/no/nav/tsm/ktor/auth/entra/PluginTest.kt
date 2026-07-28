@@ -21,7 +21,7 @@ class PluginTest {
         }
 
         routing {
-            entraMachineToken { get("/test") { call.respondText("Authenticated") } }
+            authenticate(ENTRA_MACHINE_TOKEN) { get("/test") { call.respondText("Authenticated") } }
         }
 
         val client = createClient {}
@@ -43,7 +43,7 @@ class PluginTest {
         install(EntraAuth) { autoStub = true }
 
         routing {
-            entraMachineToken { get("/test") { call.respondText("Authenticated") } }
+            authenticate(ENTRA_MACHINE_TOKEN) { get("/test") { call.respondText("Authenticated") } }
         }
 
         val client = createClient {}
@@ -57,7 +57,7 @@ class PluginTest {
         install(StubbedEntraAuth)
 
         routing {
-            entraMachineToken { get("/test") { call.respondText("Authenticated") } }
+            authenticate(ENTRA_MACHINE_TOKEN) { get("/test") { call.respondText("Authenticated") } }
         }
 
         val client = createClient {}

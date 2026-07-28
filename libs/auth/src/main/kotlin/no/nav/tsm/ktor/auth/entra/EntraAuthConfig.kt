@@ -1,6 +1,6 @@
 package no.nav.tsm.ktor.auth.entra
 
-internal const val ENTRA_MACHINE_TOKEN = "tsm-ktor-entra-m2m-auth"
+const val ENTRA_MACHINE_TOKEN = "tsm-ktor-entra-m2m-auth"
 
 class EntraAuthConfig {
     private var _audience: String? = null
