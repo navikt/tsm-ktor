@@ -5,6 +5,8 @@ import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.auth.authentication
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
+import no.nav.tsm.ktor.nais.RuntimeCluster
+import no.nav.tsm.ktor.nais.getRuntimeCluster
 import java.net.URI
 
 val EntraAuth =
@@ -19,3 +21,12 @@ val EntraAuth =
             }
         }
     }
+
+val StubbedEntraAuth = createApplicationPlugin(name = "StubbedEntraAuth") {
+    val runtime = getRuntimeCluster()
+    require(runtime == RuntimeCluster.LOCAL) {
+        "You are trying to use the StubbedEntraAuth plugin in ${runtime}. That's _very_ illegal."
+    }
+
+    application.authentication { provider(ENTRA_MACHINE_TOKEN) { authenticate {} } }
+}
