@@ -1,48 +1,27 @@
 #!/bin/bash
-set -o pipefail
+set -eo pipefail
 
-# Find last version tag
-LAST_TAG=$(git tag --sort=-creatordate | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | head -n 1)
-if [ -z "$LAST_TAG" ]; then
-  echo "No previous tag found"
-  BASE_COMMIT=""
-else
-  BASE_COMMIT="$LAST_TAG"
+# Creates the git tag and GitHub release for the version already written to
+# libs/version by next-version.sh. It never changes the version, so the
+# artifacts built and tested earlier in the pipeline are exactly what gets
+# released.
+
+if [ ! -s libs/version ]; then
+  echo "libs/version is missing or empty, run scripts/next-version.sh first" >&2
+  exit 1
 fi
 
-SECOND_LINE=$(git log -1 --pretty=format:"%b")
-
-case "$SECOND_LINE" in
-  MAJOR) BUMP="major" ;;
-  MINOR) BUMP="minor" ;;
-  *)     BUMP="patch" ;;
-esac
-
-
-# Parse last version
-if [ -z "$LAST_TAG" ]; then
-  MAJOR=0; MINOR=0; PATCH=0
-else
-  VERSION=${LAST_TAG#v}
-  IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-fi
-
-case "$BUMP" in
-  major) ((MAJOR++)); MINOR=0; PATCH=0 ;;
-  minor) ((MINOR++)); PATCH=0 ;;
-  patch) ((PATCH++)) ;;
-esac
-NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+NEW_VERSION=$(cat libs/version)
 NEW_TAG="v${NEW_VERSION}"
 
-# Collect commits since last tag
-RAW_COMMITS=$(git log ${BASE_COMMIT:+$BASE_COMMIT..HEAD} --pretty=format:"%s%n%b%n---")
+if git rev-parse -q --verify "refs/tags/$NEW_TAG" >/dev/null; then
+  echo "Tag $NEW_TAG already exists" >&2
+  exit 1
+fi
 
-echo "Relevant commits:"
-echo "$RAW_COMMITS"
+LAST_TAG=${LAST_TAG:-$(git tag --sort=-creatordate | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | head -n 1 || true)}
 
-RELEASE_NOTES=$(git log ${BASE_COMMIT:+$BASE_COMMIT..HEAD} --pretty=format:"* %s")
-
+RELEASE_NOTES=$(git log ${LAST_TAG:+$LAST_TAG..HEAD} --pretty=format:"* %s")
 
 echo "Releasing $NEW_TAG"
 echo "$RELEASE_NOTES"

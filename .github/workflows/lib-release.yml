@@ -53,15 +53,17 @@ jobs:
           distribution: 'temurin'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
-      - name: Update sync version with codegen
-        run: ./scripts/set-version.sh
-      - name: Test and build lib
-        run: ./gradlew build test
-      - name: Publish package
+      - name: Test and build lib (release skipped)
+        if: github.ref != 'refs/heads/main' || needs.should_release.outputs.skip != 'false'
+        run: |
+          echo -n "0.0.0-SNAPSHOT" > libs/version
+          ./gradlew build test
+      - name: Test, build and publish lib
         if: github.ref == 'refs/heads/main' && needs.should_release.outputs.skip == 'false'
         run: |
+          ./scripts/next-version.sh
+          ./gradlew build test
           ./scripts/create-release.sh
-          ./scripts/set-version.sh
           ./gradlew publishAll
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
