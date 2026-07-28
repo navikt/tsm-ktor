@@ -3,8 +3,7 @@ on:
   push:
     paths:
       - .github/workflows/lib-release.yml
-      - 'libs/syk-zara/**'
-      - 'lib/**'
+      - 'libs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.branch }}
