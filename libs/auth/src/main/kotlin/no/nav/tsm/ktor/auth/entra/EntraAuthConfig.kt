@@ -27,15 +27,13 @@ class EntraAuthConfig {
         }
 
     /**
-     * Enables EntraID machine token validation and allows you to use entraMachineToken { ... } to
-     * protect your routes
+     * Enables EntraID machine token validation and allows you to use entraMachineToken { ... } to protect your routes
      */
     var machine: Boolean = false
 
     /**
-     * Enables EntraID on-behalf-of token validation and allows you to use entraOnBehalfOf { ... }
-     * to protect your routes on behalf of a user, also lets you get the users principal from the
-     * Ktor route 'call'.
+     * Enables EntraID on-behalf-of token validation and allows you to use entraOnBehalfOf { ... } to protect your
+     * routes on behalf of a user, also lets you get the users principal from the Ktor route 'call'.
      */
     var obo: Boolean = false
 

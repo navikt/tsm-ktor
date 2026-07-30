@@ -59,9 +59,7 @@ class EntraAuthPluginTest {
 
     @Test
     fun `enabling no modes should warn with error`() = testApplication {
-        shouldThrowMessage(
-            "EntraAuth plugin requires at least one of machine or obo to be enabled."
-        ) {
+        shouldThrowMessage("EntraAuth plugin requires at least one of machine or obo to be enabled.") {
             install(EntraAuth)
             startApplication()
         }

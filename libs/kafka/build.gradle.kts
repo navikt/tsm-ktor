@@ -1,5 +1,6 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.gradle.kotlin.dsl.check
+import org.gradle.kotlin.dsl.invoke
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -14,8 +15,7 @@ version = file("../version").readText().trim()
 dependencies {
     api(project(":libs:core"))
     api(platform(ktorLibs.bom))
-    implementation(ktorLibs.server.auth)
-    implementation(ktorLibs.server.auth.jwt)
+    api(libs.kafka.client)
 
     testImplementation(ktorLibs.server.testHost)
     testImplementation(libs.kotlin.test.junit5)

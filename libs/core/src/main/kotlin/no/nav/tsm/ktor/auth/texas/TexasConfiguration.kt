@@ -8,9 +8,7 @@ class TexasConfiguration(
             ?: throw IllegalStateException("Missing TEXAS_TOKEN_ENDPOINT environment variable"),
     val introspectionEndpoint: String =
         System.getenv("NAIS_TOKEN_INTROSPECTION_ENDPOINT")
-            ?: throw IllegalStateException(
-                "Missing TEXAS_INTROSPECTION_ENDPOINT environment variable"
-            ),
+            ?: throw IllegalStateException("Missing TEXAS_INTROSPECTION_ENDPOINT environment variable"),
 )
 
 enum class TexasTarget(val nais: String) {

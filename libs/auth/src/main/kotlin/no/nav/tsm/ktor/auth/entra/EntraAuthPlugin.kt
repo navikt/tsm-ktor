@@ -19,9 +19,7 @@ val EntraAuth =
         val config = pluginConfig
 
         if (!config.machine && !config.obo) {
-            throw IllegalArgumentException(
-                "EntraAuth plugin requires at least one of machine or obo to be enabled."
-            )
+            throw IllegalArgumentException("EntraAuth plugin requires at least one of machine or obo to be enabled.")
         }
 
         if (config.autoStub && getRuntimeCluster() == RuntimeCluster.LOCAL) {
@@ -67,9 +65,7 @@ val EntraAuth =
                 }
             }
 
-            logger.info(
-                "EntraAuth(obo) installed. Entra on-behalf-of token authentication enabled."
-            )
+            logger.info("EntraAuth(obo) installed. Entra on-behalf-of token authentication enabled.")
         }
     }
 

@@ -1,23 +1,32 @@
 [versions]
 kotlin = "2.4.10"
+
+# Core
 otel = "2.29.0"
 slf4j = "2.0.18"
 logback = "1.5.19"
 
+# Kafka
+kafka = "4.3.1"
+
+# Testing
 kotest-assertions = "6.2.2"
 junit-jupiter-engine = "6.0.1"
 spotless = "8.8.0"
 
 [libraries]
+# Core
 otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "otel" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Kafka
+kafka-client = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 
 # Testing
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter-engine" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest-assertions" }
-
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

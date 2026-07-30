@@ -33,8 +33,7 @@ class TexasClientTest {
         val mockEngine = MockEngine { request ->
             request.url.toString() shouldEqual defaultTexasConfig.tokenEndpoint
 
-            val payload =
-                texasResponseMapper.readValue<Texas.TokenRequest>(request.body.toByteArray())
+            val payload = texasResponseMapper.readValue<Texas.TokenRequest>(request.body.toByteArray())
 
             payload.target shouldEqual "api://prod-gcp.tsm.tsm-pdl-cache/.default"
             payload.identityProvider shouldEqual "entra_id"
@@ -42,10 +41,7 @@ class TexasClientTest {
             respond(
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
-                content =
-                    ByteReadChannel(
-                        """{"access_token":"ay.aeuheu","expires_in":3600,"token_type":"Bearer"}"""
-                    ),
+                content = ByteReadChannel("""{"access_token":"ay.aeuheu","expires_in":3600,"token_type":"Bearer"}"""),
             )
         }
 
@@ -60,8 +56,7 @@ class TexasClientTest {
         val mockEngine = MockEngine { request ->
             request.url.toString() shouldEqual defaultTexasConfig.tokenEndpoint
 
-            val payload =
-                texasResponseMapper.readValue<Texas.TokenRequest>(request.body.toByteArray())
+            val payload = texasResponseMapper.readValue<Texas.TokenRequest>(request.body.toByteArray())
 
             payload.target shouldEqual "nhn:scoperino nhn:pepperino"
             payload.identityProvider shouldEqual "maskinporten"
@@ -69,10 +64,7 @@ class TexasClientTest {
             respond(
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
-                content =
-                    ByteReadChannel(
-                        """{"access_token":"ay.aeuheu","expires_in":3600,"token_type":"Bearer"}"""
-                    ),
+                content = ByteReadChannel("""{"access_token":"ay.aeuheu","expires_in":3600,"token_type":"Bearer"}"""),
             )
         }
 

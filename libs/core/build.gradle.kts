@@ -44,7 +44,10 @@ tasks.named<Test>("test") {
 
 tasks {
     configure<SpotlessExtension> {
-        kotlin { ktfmt("0.62").kotlinlangStyle() }
+        kotlin { ktfmt("0.64").kotlinlangStyle().configure {
+            it.setMaxWidth(120)
+            it.setContinuationIndent(4)
+        } }
         check {
             dependsOn("spotlessApply")
         }

@@ -6,9 +6,7 @@ import io.ktor.server.plugins.di.dependencies
 import no.nav.tsm.ktor.nais.RuntimeCluster
 import no.nav.tsm.ktor.nais.getRuntimeCluster
 
-fun Application.dynamicDependencies(
-    block: DynamicDependenciesScope.() -> DynamicDependenciesScope
-) {
+fun Application.dynamicDependencies(block: DynamicDependenciesScope.() -> DynamicDependenciesScope) {
     DynamicDependenciesScope(isLocal(), this).block()
 }
 

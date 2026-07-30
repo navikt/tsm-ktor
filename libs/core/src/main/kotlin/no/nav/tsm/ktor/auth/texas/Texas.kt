@@ -19,10 +19,7 @@ import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.ktor.nais.getRuntimeCluster
 
-class Texas(
-    httpClient: HttpClient,
-    private val config: TexasConfiguration = TexasConfiguration(),
-) {
+class Texas(httpClient: HttpClient, private val config: TexasConfiguration = TexasConfiguration()) {
     private val logger = logger()
     private val inferredCluster = getRuntimeCluster()
 
@@ -83,9 +80,7 @@ class Texas(
 
     private suspend fun HttpResponse.logNonSuccess(target: String) {
         if (this.contentType()?.isTextType() == true) {
-            logger.error(
-                "Unable to request m2m token for: ${target}, texas says: ${this.body<String>()}"
-            )
+            logger.error("Unable to request m2m token for: ${target}, texas says: ${this.body<String>()}")
         } else {
             logger.error(
                 "Unable to request m2m token for: ${target}, texas responded with status ${this.status} and no content type"
