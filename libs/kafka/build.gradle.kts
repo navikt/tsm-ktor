@@ -21,6 +21,7 @@ dependencies {
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.junit.jupiter.engine)
+    testImplementation(libs.testcontainers.kafka)
 
     testRuntimeOnly(libs.logback.classic)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
