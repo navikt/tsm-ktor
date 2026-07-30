@@ -47,6 +47,7 @@ sealed interface KafkaConfig {
 fun Application.kafkaConfig(): KafkaConfig {
     val confConfig = environment.config.config("kafka.config").toMap()
     if (confConfig.isNotEmpty()) {
+        println(confConfig)
         return KafkaConfig.Raw(confConfig)
     }
 

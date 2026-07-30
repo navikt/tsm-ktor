@@ -3,8 +3,9 @@
         <appender-ref ref="PRETTY-CONSOLE"/>
     </root>
 
-    <logger name="no.nav.tsm" level="DEBUG"/>
+    <logger name="no.nav.tsm.ktor" level="DEBUG"/>
     <logger name="org.testcontainers" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
 
     <!-- Pretty console appender for local development -->
     <appender name="PRETTY-CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
