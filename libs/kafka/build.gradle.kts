@@ -55,7 +55,7 @@ publishing {
         create<MavenPublication>("gpr") {
             from(components["java"])
             groupId = "no.nav.tsm"
-            artifactId = "ktor-auth"
+            artifactId = "ktor-kafka"
             version = version
         }
     }
