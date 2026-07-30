@@ -13,6 +13,7 @@ kafka = "4.3.1"
 kotest-assertions = "6.2.2"
 junit-jupiter-engine = "6.0.1"
 spotless = "8.8.0"
+testcontainers = "2.0.5"
 
 [libraries]
 # Core
@@ -27,6 +28,7 @@ kafka-client = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter-engine" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest-assertions" }
+testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka", version.ref = "testcontainers" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
