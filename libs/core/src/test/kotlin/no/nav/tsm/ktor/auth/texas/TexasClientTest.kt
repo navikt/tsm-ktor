@@ -34,7 +34,7 @@ class TexasClientTest {
             request.url.toString() shouldEqual defaultTexasConfig.tokenEndpoint
 
             val payload =
-                texasResponseMapper.readValue<TexasClient.TokenRequest>(request.body.toByteArray())
+                texasResponseMapper.readValue<Texas.TokenRequest>(request.body.toByteArray())
 
             payload.target shouldEqual "api://prod-gcp.tsm.tsm-pdl-cache/.default"
             payload.identityProvider shouldEqual "entra_id"
@@ -49,7 +49,7 @@ class TexasClientTest {
             )
         }
 
-        val texas = TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
+        val texas = Texas(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
 
         val response = texas.entraIdToken("tsm", "tsm-pdl-cache", TexasTarget.PROD)
         response.token shouldEqual "ay.aeuheu"
@@ -61,7 +61,7 @@ class TexasClientTest {
             request.url.toString() shouldEqual defaultTexasConfig.tokenEndpoint
 
             val payload =
-                texasResponseMapper.readValue<TexasClient.TokenRequest>(request.body.toByteArray())
+                texasResponseMapper.readValue<Texas.TokenRequest>(request.body.toByteArray())
 
             payload.target shouldEqual "nhn:scoperino nhn:pepperino"
             payload.identityProvider shouldEqual "maskinporten"
@@ -76,7 +76,7 @@ class TexasClientTest {
             )
         }
 
-        val texas = TexasClient(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
+        val texas = Texas(httpClient = HttpClient(mockEngine) {}, config = defaultTexasConfig)
 
         val response = texas.maskinporten("nhn:scoperino nhn:pepperino")
         response.token shouldEqual "ay.aeuheu"

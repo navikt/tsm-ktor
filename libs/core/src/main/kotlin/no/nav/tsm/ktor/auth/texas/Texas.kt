@@ -19,7 +19,7 @@ import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.ktor.nais.getRuntimeCluster
 
-class TexasClient(
+class Texas(
     httpClient: HttpClient,
     private val config: TexasConfiguration = TexasConfiguration(),
 ) {
