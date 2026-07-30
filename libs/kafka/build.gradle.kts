@@ -17,6 +17,9 @@ dependencies {
     api(platform(ktorLibs.bom))
     api(libs.kafka.client)
 
+    implementation(libs.jackson.module.kotlin)
+    implementation(libs.jackson.datatype.jsr310)
+
     testImplementation(ktorLibs.server.testHost)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.assertions)

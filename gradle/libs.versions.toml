@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.4.10"
+jackson = "2.22.1"
 
 # Core
 otel = "2.29.0"
@@ -20,6 +21,8 @@ testcontainers = "2.0.5"
 otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "otel" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson"}
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson"}
 
 # Kafka
 kafka-client = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }

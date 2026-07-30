@@ -13,14 +13,6 @@ plugins {
 version = file("../version").readText().trim()
 
 dependencies {
-    testImplementation(ktorLibs.server.testHost)
-    testImplementation(ktorLibs.client.mock)
-    testImplementation(libs.kotlin.test.junit5)
-    testImplementation(libs.kotest.assertions)
-    testImplementation(libs.junit.jupiter.engine)
-    testRuntimeOnly(libs.logback.classic)
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
     api(platform(ktorLibs.bom))
     api(ktorLibs.client.core)
     api(ktorLibs.server.di)
@@ -29,6 +21,14 @@ dependencies {
 
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.serialization.jackson)
+
+    testImplementation(ktorLibs.server.testHost)
+    testImplementation(ktorLibs.client.mock)
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.kotest.assertions)
+    testImplementation(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.logback.classic)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 java {
@@ -44,10 +44,12 @@ tasks.named<Test>("test") {
 
 tasks {
     configure<SpotlessExtension> {
-        kotlin { ktfmt("0.64").kotlinlangStyle().configure {
-            it.setMaxWidth(120)
-            it.setContinuationIndent(4)
-        } }
+        kotlin {
+            ktfmt("0.64").kotlinlangStyle().configure {
+                it.setMaxWidth(120)
+                it.setContinuationIndent(4)
+            }
+        }
         check {
             dependsOn("spotlessApply")
         }
