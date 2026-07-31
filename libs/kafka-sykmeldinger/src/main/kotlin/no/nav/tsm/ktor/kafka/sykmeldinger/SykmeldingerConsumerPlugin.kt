@@ -3,6 +3,7 @@ package no.nav.tsm.ktor.kafka.sykmeldinger
 import io.ktor.server.application.*
 import no.nav.tsm.ktor.kafka.KafkaConsumer
 import no.nav.tsm.ktor.logger
+import no.nav.tsm.sykmelding.input.core.model.SykmeldingModule
 import no.nav.tsm.sykmelding.input.core.model.SykmeldingRecord
 
 /** Get records from tsm.sykmledinger in almost zero config! */
@@ -14,6 +15,7 @@ val SykmeldingerConsumer =
 
         application.install(KafkaConsumer) {
             groupId = pluginConfig.groupId
+            jacksonModule(SykmeldingModule())
             consume<SykmeldingRecord>(
                 name = "tsm.sykmeldinger",
                 onTombstone = { pluginConfig.onTombstone(it) },

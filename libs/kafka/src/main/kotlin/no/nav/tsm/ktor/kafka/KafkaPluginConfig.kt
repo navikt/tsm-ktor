@@ -1,6 +1,8 @@
 package no.nav.tsm.ktor.kafka
 
 import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.Module
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -13,6 +15,11 @@ class KafkaConsumerPluginConfig {
     var pollDuration: Duration = 10.seconds
     var retryDuration: Duration = 60.seconds
     val topics: MutableList<KafkaTopic<*>> = mutableListOf()
+    val jacksonModules: MutableList<Module> = mutableListOf()
+
+    fun jacksonModule(vararg module: Module) {
+        jacksonModules += module
+    }
 
     inline fun <reified RecordType : Any> consume(
         name: String,
@@ -47,7 +54,7 @@ sealed interface KafkaTopic<RecordType : Any> {
     val topic: String
     val onTombstone: (key: String) -> Unit
 
-    fun handleRecord(value: ByteArray, meta: RecordMeta)
+    fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
 
     class Record<RecordType : Any>(
         override val topic: String,
@@ -55,10 +62,10 @@ sealed interface KafkaTopic<RecordType : Any> {
         override val onTombstone: (key: String) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
     ) : KafkaTopic<RecordType> {
-        override fun handleRecord(value: ByteArray, meta: RecordMeta) {
+        override fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
                 try {
-                    kafkaObjectMapper.readValue(value, jacksonRef)
+                    objectMapper.readValue(value, jacksonRef)
                 } catch (e: Exception) {
                     throw KafkaParseException(meta, e)
                 }
@@ -77,10 +84,10 @@ sealed interface KafkaTopic<RecordType : Any> {
         override val onTombstone: (key: String) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
     ) : KafkaTopic<RecordType> {
-        override fun handleRecord(value: ByteArray, meta: RecordMeta) {
+        override fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
                 try {
-                    kafkaObjectMapper.readValue(value, jacksonRef)
+                    objectMapper.readValue(value, jacksonRef)
                 } catch (e: Exception) {
                     throw KafkaParseException(meta, e)
                 }

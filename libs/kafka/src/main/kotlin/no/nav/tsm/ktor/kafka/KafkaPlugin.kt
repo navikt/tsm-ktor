@@ -2,7 +2,7 @@ package no.nav.tsm.ktor.kafka
 
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
-import java.util.UUID
+import java.util.*
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.*
 import no.nav.tsm.ktor.logger
@@ -20,6 +20,10 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
             val logger = logger()
             val configuredTopics: List<String> = pluginConfig.topics.map { it.topic }
             val consumer = ByteArrayConsumer(pluginConfig.groupId, application.kafkaConfig())
+            val objectMapper =
+                kafkaObjectMapper().apply {
+                    pluginConfig.jacksonModules.forEach { registerModule(it) }
+                }
 
             val unsubscribeAndRetry: suspend (String, Throwable) -> Unit = { message, cause ->
                 logger.error(message, cause)
@@ -59,9 +63,8 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                                             continue
                                         }
 
-                                        handler.handleRecord(value, meta)
-                                        // If handleRecord fails, sync is skipped and error propagates to
-                                        // KafkaHandlerException
+                                        handler.handleRecord(value, meta, objectMapper)
+                                        /* If handleRecord fails, sync is skipped and error propagates to  KafkaHandlerException */
                                         consumer.commitSync(topic, record)
                                     }
                                 }
