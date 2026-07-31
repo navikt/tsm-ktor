@@ -1,6 +1,7 @@
 package no.nav.tsm.ktor.kafka
 
 import io.ktor.server.application.Application
+import io.ktor.server.config.ApplicationConfig
 import java.util.Properties
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.ktor.nais.RuntimeCluster
@@ -44,14 +45,16 @@ sealed interface KafkaConfig {
     }
 }
 
-fun Application.kafkaConfig(): KafkaConfig {
-    val confConfig = environment.config.config("kafka.config").toMap()
+fun ApplicationConfig.kafkaConfig(): KafkaConfig {
+    val confConfig = this.config("kafka.config").toMap()
     if (confConfig.isNotEmpty()) {
         return KafkaConfig.Raw(confConfig)
     }
 
     return autoConfig()
 }
+
+fun Application.kafkaConfig(): KafkaConfig = environment.config.kafkaConfig()
 
 private fun autoConfig(): KafkaConfig =
     if (getRuntimeCluster() === RuntimeCluster.LOCAL) {
