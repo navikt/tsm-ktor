@@ -1,5 +1,6 @@
 package no.nav.tsm.ktor.kafka
 
+import com.typesafe.config.ConfigException
 import io.ktor.server.application.Application
 import io.ktor.server.config.ApplicationConfig
 import java.util.Properties
@@ -46,10 +47,15 @@ sealed interface KafkaConfig {
 }
 
 fun ApplicationConfig.kafkaConfig(): KafkaConfig {
-    val confConfig = this.config("kafka.config").toMap()
-    if (confConfig.isNotEmpty()) {
-        return KafkaConfig.Raw(confConfig)
+    try {
+        val confConfig = this.config("kafka.config").toMap()
+        if (confConfig.isNotEmpty()) {
+            return KafkaConfig.Raw(confConfig)
+        }
+    } catch (_: ConfigException.Missing) {
+        return autoConfig()
     }
+
 
     return autoConfig()
 }
