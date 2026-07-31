@@ -1,11 +1,7 @@
 package no.nav.tsm.ktor.kafka
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -15,48 +11,24 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.nav.tsm.ktor.logger
 
-@DslMarker annotation class KafkaConsumerDsl
-
-@KafkaConsumerDsl
-class KafkaConsumerPluginConfig {
-    lateinit var groupId: String
-    var pollDuration: Duration = 10.seconds
-    var retryDuration: Duration = 60.seconds
-    val topics: MutableList<KafkaTopic<*>> = mutableListOf()
-
-    inline fun <reified RecordType : Any> topic(
-        name: String,
-        noinline onRecord: (RecordType) -> Unit,
-        noinline onTombstone: (key: String) -> Unit,
-    ) {
-        topics +=
-            KafkaTopic(
-                topic = name,
-                onRecord = onRecord,
-                onTombstone = onTombstone,
-                jacksonRef = jacksonTypeRef<RecordType>(),
-            )
-    }
-}
-
-class KafkaTopic<RecordType : Any>(
-    val topic: String,
-    val onRecord: (record: RecordType) -> Unit,
-    val onTombstone: (key: String) -> Unit,
-    val jacksonRef: TypeReference<RecordType>,
-) {
-    fun parse(value: ByteArray): () -> Unit {
-        val parsed = kafkaObjectMapper.readValue(value, jacksonRef)
-
-        return { onRecord(parsed) }
-    }
-}
-
+/**
+ * Installs a consumer and attaches to the Ktor life-cycle. The consumer can subscribe to many topics with each their
+ * own handler and their own record type.
+ *
+ * The consumer handles committing to the appropriate topic, partition and offset, but only if the record was parsed
+ * successfully, and the handler
+ */
 val KafkaConsumer =
     createApplicationPlugin(name = "KafkaConsumer", ::KafkaConsumerPluginConfig) {
         val logger = logger()
         val configuredTopics: List<String> = pluginConfig.topics.map { it.topic }
         val consumer = ByteArrayConsumer(pluginConfig.groupId, application.kafkaConfig())
+
+        val unsubscribeAndRetry: suspend (String, Throwable) -> Unit = { message, cause ->
+            logger.error(message, cause)
+            consumer.unsubscribe()
+            delay(pluginConfig.retryDuration)
+        }
 
         on(MonitoringEvent(ApplicationStarted)) { application ->
             application.launch {
@@ -90,8 +62,7 @@ val KafkaConsumer =
                                     }
 
                                     try {
-                                        val deliver = handler.parse(value)
-                                        deliver()
+                                        handler.handleRecord(value)
                                         consumer.commitSync(topic, record)
                                     } catch (ex: Exception) {
                                         logger.error(
@@ -105,10 +76,21 @@ val KafkaConsumer =
                             }
                         } catch (ex: CancellationException) {
                             logger.info("Kafka consumer cancelled gracefully (application stopping)", ex)
+                        } catch (ex: KafkaParseException) {
+                            unsubscribeAndRetry(
+                                "Parsing of record on topic ${ex.topic} failed, retrying after ${pluginConfig.retryDuration}",
+                                ex,
+                            )
+                        } catch (ex: KafkaHandlerException) {
+                            unsubscribeAndRetry(
+                                "Handling of record on topic ${ex.topic} failed, retrying after ${pluginConfig.retryDuration}",
+                                ex,
+                            )
                         } catch (ex: Exception) {
-                            logger.error("Error running Kafka consumer, waiting 60 seconds to retry", ex)
-                            consumer.unsubscribe()
-                            delay(pluginConfig.retryDuration)
+                            unsubscribeAndRetry(
+                                "Unknown error running Kafka consumer, waiting ${pluginConfig.retryDuration} to retry",
+                                ex,
+                            )
                         }
                     }
                 }

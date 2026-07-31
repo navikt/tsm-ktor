@@ -36,6 +36,7 @@ class KafkaTest {
             }
 
         val producer = createProducer(kafka.bootstrapServers)
+        val admin = createAdmin(kafka.bootstrapServers)
 
         val hocon =
             """
@@ -95,6 +96,9 @@ class KafkaTest {
             recordMock(MyRecord("125", "abc", true))
             tombstoneMock("test-key")
         }
+
+        val offset = admin.getOffset("test-group-id")
+        assert(offset == 3L) { "Expected offset to be 3, but was $offset" }
     }
 }
 
@@ -116,8 +120,22 @@ private fun createProducer(bootstrapServers: String): KafkaProducer<String, Byte
     return KafkaProducer(props, StringSerializer(), ByteArraySerializer())
 }
 
-suspend fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?) {
+private suspend fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?) {
     withContext(Dispatchers.IO) {
         this@send.send(ProducerRecord(topic, key, value)).get()
     }
+}
+
+private fun createAdmin(bootstrapServers: String): AdminClient {
+    val props =
+        Properties().apply {
+            this[AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG] = bootstrapServers
+        }
+    return AdminClient.create(props)
+}
+
+private fun AdminClient.getOffset(groupId: String): Long {
+    val offsets = this.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get()
+    val partition = offsets.keys.first()
+    return offsets[partition]?.offset() ?: 0
 }
