@@ -3,12 +3,14 @@ package no.nav.tsm.ktor.kafka
 import com.typesafe.config.ConfigFactory
 import io.ktor.server.config.HoconApplicationConfig
 import io.ktor.server.testing.testApplication
+import io.mockk.mockk
+import io.mockk.verify
+import io.mockk.verifyOrder
 import java.util.Properties
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import kotlin.use
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
@@ -33,6 +35,8 @@ class KafkaTest {
                 createTopics(listOf("example-topic"))
             }
 
+        val producer = createProducer(kafka.bootstrapServers)
+
         val hocon =
             """
                 |kafka.config {
@@ -44,11 +48,13 @@ class KafkaTest {
     }
 
     @Test
-    fun `dummy`() = testApplication {
+    fun `simple config and producer tests with records and tombstone`() = testApplication {
         environment {
             config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
         }
 
+        val tombstoneMock = mockk<(String) -> Unit>(relaxed = true)
+        val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
         install(KafkaConsumer) {
             groupId = "test-group-id"
             pollDuration = 1.seconds
@@ -57,34 +63,38 @@ class KafkaTest {
             topic<MyRecord>(
                 name = "example-topic",
                 onTombstone = { key ->
-                    println("Received tombstone for key: $key")
+                    tombstoneMock(key)
                 },
                 onRecord = { record ->
-                    println("Received record: $record")
+                    recordMock(record)
                 },
             )
         }
 
         startApplication()
 
-        println("Producing records to Kafka...")
-        kafka.produce(
+        producer.send(
             topic = "example-topic",
             key = "test-key",
-            value = """{"sykmeldingId":"123","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
         )
-        kafka.produce(
+        producer.send(
             topic = "example-topic",
             key = "test-key-2",
-            value = """{"garbage":"abc"}""".toByteArray(),
+            value = """{"sykmeldingId":"125","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
         )
-        kafka.produce(
+        producer.send(
             topic = "example-topic",
-            key = "test-key-2",
+            key = "test-key",
             value = null,
         )
 
-        delay(5000)
+        verify(timeout = 5000) { tombstoneMock(any()) }
+        verifyOrder {
+            recordMock(MyRecord("124", "abc", true))
+            recordMock(MyRecord("125", "abc", true))
+            tombstoneMock("test-key")
+        }
     }
 }
 
@@ -98,14 +108,16 @@ private fun ConfluentKafkaContainer.createTopics(topics: List<String>) {
     }
 }
 
-suspend fun ConfluentKafkaContainer.produce(topic: String, key: String, value: ByteArray?) {
-    withContext(Dispatchers.IO) {
-        val props =
-            Properties().apply {
-                this["bootstrap.servers"] = bootstrapServers
-            }
-        KafkaProducer(props, StringSerializer(), ByteArraySerializer()).use { producer ->
-            producer.send(ProducerRecord(topic, key, value)).get()
+private fun createProducer(bootstrapServers: String): KafkaProducer<String, ByteArray> {
+    val props =
+        Properties().apply {
+            this["bootstrap.servers"] = bootstrapServers
         }
+    return KafkaProducer(props, StringSerializer(), ByteArraySerializer())
+}
+
+suspend fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?) {
+    withContext(Dispatchers.IO) {
+        this@send.send(ProducerRecord(topic, key, value)).get()
     }
 }
