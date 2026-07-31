@@ -10,6 +10,7 @@ catalog {
         library("core", "no.nav.tsm:ktor:$version")
         library("auth", "no.nav.tsm:ktor-auth:$version")
         library("kafka", "no.nav.tsm:ktor-kafka:$version")
+        library("kafka-sykmeldinger", "no.nav.tsm:ktor-kafka-sykmeldinger:$version")
     }
 }
 

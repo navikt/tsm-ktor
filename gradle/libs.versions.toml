@@ -10,6 +10,9 @@ logback = "1.5.19"
 # Kafka
 kafka = "4.3.1"
 
+# Kafka Sykmeldinger
+tsm-sykmeldinger-input = "27"
+
 # Testing
 kotest-assertions = "6.2.2"
 junit-jupiter-engine = "6.0.1"
@@ -27,6 +30,9 @@ jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-dat
 
 # Kafka
 kafka-client = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
+
+# Kafka Sykmeldinger
+tsm-sykmeldinger-input = { module = "no.nav.tsm.sykmelding:input", version.ref = "tsm-sykmeldinger-input" }
 
 # Testing
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter-engine" }

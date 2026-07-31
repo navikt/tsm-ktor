@@ -1,0 +1,23 @@
+package no.nav.tsm.ktor.kafka.sykmeldinger
+
+import io.ktor.server.application.*
+import no.nav.tsm.ktor.kafka.KafkaConsumer
+import no.nav.tsm.ktor.logger
+import no.nav.tsm.sykmelding.input.core.model.SykmeldingRecord
+
+/** Get records from tsm.sykmledinger in almost zero config! */
+val SykmeldingerConsumer =
+    createApplicationPlugin(name = "SymfoniSykmeldingerConsumer", ::SykmeldingConsumerConfig) {
+        val logger = logger()
+
+        logger.info("Automagic configuration of tsm.sykmeldinge consumer enabled! \uD83D\uDE80")
+
+        application.install(KafkaConsumer) {
+            groupId = pluginConfig.groupId
+            consume<SykmeldingRecord>(
+                name = "tsm.sykmeldinger",
+                onTombstone = { pluginConfig.onTombstone(it) },
+                onRecord = { pluginConfig.onRecord(it) },
+            )
+        }
+    }

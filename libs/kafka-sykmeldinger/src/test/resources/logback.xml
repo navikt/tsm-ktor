@@ -1,0 +1,18 @@
+q<configuration>
+    <root level="INFO">
+        <appender-ref ref="PRETTY-CONSOLE"/>
+    </root>
+
+    <logger name="no.nav.tsm.ktor" level="DEBUG"/>
+    <logger name="org.testcontainers" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+
+    <!-- Pretty console appender for local development -->
+    <appender name="PRETTY-CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>
+                %d{HH:mm:ss.SSS} %highlight(%-5level) %X{call-id} [%thread] %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+</configuration>

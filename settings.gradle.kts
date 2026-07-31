@@ -10,6 +10,7 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         maven("https://jitpack.io")
+        maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
     }
     versionCatalogs {
         create("ktorLibs").from("io.ktor:ktor-version-catalog:3.5.1")
@@ -21,4 +22,5 @@ rootProject.name = "tsm-ktor"
 include(":libs:core")
 include(":libs:auth")
 include(":libs:kafka")
+include(":libs:kafka-sykmeldinger")
 include(":libs:catalog")
