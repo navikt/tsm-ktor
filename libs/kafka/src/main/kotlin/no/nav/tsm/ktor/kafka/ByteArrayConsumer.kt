@@ -2,6 +2,7 @@ package no.nav.tsm.ktor.kafka
 
 import java.time.Duration
 import kotlin.collections.set
+import no.nav.tsm.ktor.logger
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
@@ -15,6 +16,7 @@ class ByteArrayConsumer(
     groupId: String,
     config: KafkaConfig,
 ) {
+    private val logger = logger()
     private val consumer: KafkaConsumer<String, ByteArray?>
 
     init {
@@ -35,6 +37,7 @@ class ByteArrayConsumer(
     fun poll(timeout: Duration): ConsumerRecords<String, ByteArray?> = consumer.poll(timeout)
 
     fun commitSync(topic: String, record: ConsumerRecord<String, ByteArray?>) {
+        logger.debug("Committing offset ${record.offset() + 1} for topic $topic, partition ${record.partition()}")
         this.commitSync(topic, record.partition(), record.offset() + 1)
     }
 
