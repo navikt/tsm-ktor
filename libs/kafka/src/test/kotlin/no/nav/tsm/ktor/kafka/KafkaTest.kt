@@ -56,6 +56,7 @@ class KafkaTest {
 
         val tombstoneMock = mockk<(String) -> Unit>(relaxed = true)
         val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
+
         install(KafkaConsumer) {
             groupId = "test-group-id"
             pollDuration = 1.seconds
@@ -99,6 +100,53 @@ class KafkaTest {
 
         val offset = admin.getOffset("test-group-id")
         assert(offset == 3L) { "Expected offset to be 3, but was $offset" }
+    }
+
+    @Test
+    fun `should be able to install multiple Kafka consumers`() = testApplication {
+        environment {
+            config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
+        }
+
+        val oneMock = mockk<(MyRecord) -> Unit>(relaxed = true)
+        val twoMock = mockk<(MyRecord) -> Unit>(relaxed = true)
+
+        install(KafkaConsumer) {
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+            topic<MyRecord>(
+                name = "example-topic",
+                onTombstone = {},
+                onRecord = { record ->
+                    oneMock(record)
+                },
+            )
+        }
+
+        install(KafkaConsumer) {
+            groupId = "test-group-other"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+            topic<MyRecord>(
+                name = "example-topic",
+                onTombstone = {},
+                onRecord = { record ->
+                    twoMock(record)
+                },
+            )
+        }
+
+        startApplication()
+
+        producer.send(
+            topic = "example-topic",
+            key = "test-key",
+            value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+        )
+
+        verify(timeout = 5000) { oneMock(any()) }
+        verify(timeout = 5000) { twoMock(any()) }
     }
 }
 
