@@ -7,19 +7,18 @@ import io.ktor.server.testing.*
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
-import kotlinx.coroutines.delay
 import java.util.*
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.delay
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
-import org.apache.kafka.clients.admin.OffsetSpec
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
-import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.kafka.ConfluentKafkaContainer
@@ -130,11 +129,12 @@ class KafkaTest {
             key = "test-key",
             value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
         )
-        val badRecord = producer.send(
-            topic = "example-topic",
-            key = "test-key-2",
-            value = """{"someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
-        )
+        val badRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key-2",
+                value = """{"someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
 
         delay(2.seconds)
 
@@ -143,9 +143,56 @@ class KafkaTest {
         offset shouldEqual (badRecord.offset())
 
         // Let other tests skip this bad record
-        kafka.forceOffset("example-topic", "test-group-id")
+        kafka.forceOffset("example-topic", "test-group-id", badRecord.offset() + 1)
     }
 
+    @Test
+    fun `when onRecord fails, should not commit and should retry`() = testApplication {
+        environment {
+            config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
+        }
+
+        install(KafkaConsumer) {
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            var first = true
+            consume<MyRecord>(
+                name = "example-topic",
+                onTombstone = {},
+                onRecord = {
+                    if (!first) {
+                        throw RuntimeException("Test: Failed to process record")
+                    }
+                    first = false
+                },
+            )
+        }
+
+        startApplication()
+
+        producer.send(
+            topic = "example-topic",
+            key = "test-key",
+            value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        val willFailRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+
+        delay(2.seconds)
+
+        val offset = kafka.getOffset("example-topic", "test-group-id")
+        // Not +1
+        offset shouldEqual (willFailRecord.offset())
+
+        // Let other tests skip this bad record
+        kafka.forceOffset("example-topic", "test-group-id", willFailRecord.offset() + 1)
+    }
 
     @Test
     fun `should support multiple topics`() = testApplication {
@@ -345,11 +392,9 @@ private fun ConfluentKafkaContainer.getOffset(topic: String, groupId: String): L
     return offsets[partition]?.offset() ?: throw IllegalStateException("Found no offset for topic \"$topic\"")
 }
 
-private fun ConfluentKafkaContainer.forceOffset(topic: String, groupId: String): Long {
+private fun ConfluentKafkaContainer.forceOffset(topic: String, groupId: String, offset: Long) {
     createAdmin(bootstrapServers).use { admin ->
         val partition = TopicPartition(topic, 0)
-        val end = admin.listOffsets(mapOf(partition to OffsetSpec.latest())).partitionResult(partition).get().offset()
-        admin.alterConsumerGroupOffsets(groupId, mapOf(partition to OffsetAndMetadata(end))).all().get()
-        return end
+        admin.alterConsumerGroupOffsets(groupId, mapOf(partition to OffsetAndMetadata(offset))).all().get()
     }
 }

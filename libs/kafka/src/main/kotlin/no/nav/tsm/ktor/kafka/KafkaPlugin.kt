@@ -59,17 +59,10 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                                             continue
                                         }
 
-                                        try {
-                                            handler.handleRecord(value, meta)
-                                            consumer.commitSync(topic, record)
-                                        } catch (ex: Exception) {
-                                            logger.error(
-                                                "Error parsing record with key ${record.key()} on topic $topic",
-                                                ex,
-                                            )
-
-                                            throw ex
-                                        }
+                                        handler.handleRecord(value, meta)
+                                        // If handleRecord fails, sync is skipped and error propagates to
+                                        // KafkaHandlerException
+                                        consumer.commitSync(topic, record)
                                     }
                                 }
                             } catch (ex: CancellationException) {
