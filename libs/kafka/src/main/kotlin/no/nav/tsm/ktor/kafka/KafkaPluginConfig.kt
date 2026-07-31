@@ -23,8 +23,8 @@ class KafkaConsumerPluginConfig {
 
     inline fun <reified RecordType : Any> consume(
         name: String,
-        noinline onRecord: (RecordType) -> Unit,
-        noinline onTombstone: (key: String) -> Unit,
+        noinline onRecord: suspend (RecordType) -> Unit,
+        noinline onTombstone: suspend (key: String) -> Unit,
     ) {
         topics +=
             KafkaTopic.Record(
@@ -52,17 +52,17 @@ class KafkaConsumerPluginConfig {
 
 sealed interface KafkaTopic<RecordType : Any> {
     val topic: String
-    val onTombstone: (key: String) -> Unit
+    val onTombstone: suspend (key: String) -> Unit
 
-    fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
+    suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
 
     class Record<RecordType : Any>(
         override val topic: String,
-        val onRecord: (record: RecordType) -> Unit,
-        override val onTombstone: (key: String) -> Unit,
+        val onRecord: suspend (record: RecordType) -> Unit,
+        override val onTombstone: suspend (key: String) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
     ) : KafkaTopic<RecordType> {
-        override fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
+        override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
                 try {
                     objectMapper.readValue(value, jacksonRef)
@@ -80,11 +80,11 @@ sealed interface KafkaTopic<RecordType : Any> {
 
     class WithMeta<RecordType : Any>(
         override val topic: String,
-        val onRecord: (value: RecordType, meta: RecordMeta) -> Unit,
-        override val onTombstone: (key: String) -> Unit,
+        val onRecord: suspend (value: RecordType, meta: RecordMeta) -> Unit,
+        override val onTombstone: suspend (key: String) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
     ) : KafkaTopic<RecordType> {
-        override fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
+        override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
                 try {
                     objectMapper.readValue(value, jacksonRef)
