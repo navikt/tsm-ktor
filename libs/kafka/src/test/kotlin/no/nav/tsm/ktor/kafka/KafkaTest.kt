@@ -2,22 +2,20 @@ package no.nav.tsm.ktor.kafka
 
 import com.typesafe.config.ConfigFactory
 import io.kotest.matchers.equals.shouldEqual
-import io.ktor.server.config.HoconApplicationConfig
-import io.ktor.server.testing.testApplication
+import io.ktor.server.config.*
+import io.ktor.server.testing.*
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
-import java.util.Properties
+import java.util.*
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
-import kotlin.use
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.kafka.ConfluentKafkaContainer
@@ -30,15 +28,14 @@ data class MyRecord(
 
 class KafkaTest {
     companion object {
+        val topics = listOf("example-topic", "other-topic")
         val kafka =
             ConfluentKafkaContainer("confluentinc/cp-kafka:8.1.0").apply {
                 start()
-                createTopics(listOf("example-topic", "other-topic"))
+                createTopics(topics)
             }
 
         val producer = createProducer(kafka.bootstrapServers)
-        val admin = createAdmin(kafka.bootstrapServers)
-
         val hocon =
             """
                 |kafka.config {
@@ -63,7 +60,7 @@ class KafkaTest {
             pollDuration = 1.seconds
             retryDuration = 1.seconds
 
-            topic<MyRecord>(
+            consume<MyRecord>(
                 name = "example-topic",
                 onTombstone = { key ->
                     tombstoneMock(key)
@@ -86,11 +83,12 @@ class KafkaTest {
             key = "test-key-2",
             value = """{"sykmeldingId":"125","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
         )
-        producer.send(
-            topic = "example-topic",
-            key = "test-key",
-            value = null,
-        )
+        val lastRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = null,
+            )
 
         verify(timeout = 5000) { tombstoneMock(any()) }
         verifyOrder {
@@ -99,8 +97,8 @@ class KafkaTest {
             tombstoneMock("test-key")
         }
 
-        val offset = admin.getOffset("example-topic", "test-group-id")
-        assert(offset == 3L) { "Expected offset to be 3, but was $offset" }
+        val offset = kafka.getOffset("example-topic", "test-group-id")
+        offset shouldEqual (lastRecord.offset() + 1L)
     }
 
     @Test
@@ -119,7 +117,7 @@ class KafkaTest {
             pollDuration = 1.seconds
             retryDuration = 1.seconds
 
-            topic<MyRecord>(
+            consume<MyRecord>(
                 name = "example-topic",
                 onTombstone = { key ->
                     tombOneMock(key)
@@ -129,7 +127,7 @@ class KafkaTest {
                 },
             )
 
-            topic<MyRecord>(
+            consume<MyRecord>(
                 name = "other-topic",
                 onTombstone = { key ->
                     tombTwoMock(key)
@@ -147,30 +145,34 @@ class KafkaTest {
             key = "test-key",
             value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
         )
-        producer.send(
-            topic = "example-topic",
-            key = "test-key",
-            value = null,
-        )
+        val lastRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = null,
+            )
         producer.send(
             topic = "other-topic",
             key = "test-key",
             value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
         )
-        producer.send(
-            topic = "other-topic",
-            key = "test-key",
-            value = null,
-        )
+        val lastOtherRecord =
+            producer.send(
+                topic = "other-topic",
+                key = "test-key",
+                value = null,
+            )
 
         verify(timeout = 5000) { recordOneMock(MyRecord("124", "abc", true)) }
         verify(timeout = 5000) { recordTwoMock(MyRecord("124", "abc", true)) }
+        verify(timeout = 5000) { tombOneMock("test-key") }
+        verify(timeout = 5000) { tombTwoMock("test-key") }
 
-        val exampleOffset = admin.getOffset("example-topic", "test-group-id")
-        exampleOffset shouldEqual 2L
+        val exampleOffset = kafka.getOffset("example-topic", "test-group-id")
+        exampleOffset shouldEqual lastRecord.offset() + 1L
 
-        val otherOffset = admin.getOffset("other-topic", "test-group-id")
-        otherOffset shouldEqual 2L
+        val otherOffset = kafka.getOffset("other-topic", "test-group-id")
+        otherOffset shouldEqual lastOtherRecord.offset() + 1L
     }
 
     @Test
@@ -186,7 +188,7 @@ class KafkaTest {
             groupId = "test-group-id"
             pollDuration = 1.seconds
             retryDuration = 1.seconds
-            topic<MyRecord>(
+            consume<MyRecord>(
                 name = "example-topic",
                 onTombstone = {},
                 onRecord = { record ->
@@ -199,7 +201,7 @@ class KafkaTest {
             groupId = "test-group-other"
             pollDuration = 1.seconds
             retryDuration = 1.seconds
-            topic<MyRecord>(
+            consume<MyRecord>(
                 name = "example-topic",
                 onTombstone = {},
                 onRecord = { record ->
@@ -219,14 +221,52 @@ class KafkaTest {
         verify(timeout = 5000) { oneMock(any()) }
         verify(timeout = 5000) { twoMock(any()) }
     }
+
+    @Test
+    fun `consumeRecord should provide record metadata`() = testApplication {
+        environment {
+            config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
+        }
+
+        val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
+        val metaMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
+
+        install(KafkaConsumer) {
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            consume<MyRecord>(
+                name = "example-topic",
+                onTombstone = {},
+                onRecord = { value, meta ->
+                    recordMock(value)
+                    metaMock(meta)
+                },
+            )
+        }
+
+        startApplication()
+
+        val lastRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+
+        verify(timeout = 5000) { recordMock(MyRecord("124", "abc", true)) }
+        verify {
+            metaMock(match { it.topic == "example-topic" && it.partition == 0 && it.offset >= 0L })
+        }
+
+        val offset = kafka.getOffset("example-topic", "test-group-id")
+        offset shouldEqual (lastRecord.offset() + 1L)
+    }
 }
 
 private fun ConfluentKafkaContainer.createTopics(topics: List<String>) {
-    val props =
-        Properties().apply {
-            this[AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG] = bootstrapServers
-        }
-    AdminClient.create(props).use { admin ->
+    createAdmin(bootstrapServers).use { admin ->
         admin.createTopics(topics.map { NewTopic(it, 1, 1) }).all().get()
     }
 }
@@ -239,10 +279,8 @@ private fun createProducer(bootstrapServers: String): KafkaProducer<String, Byte
     return KafkaProducer(props, StringSerializer(), ByteArraySerializer())
 }
 
-private suspend fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?) {
-    withContext(Dispatchers.IO) {
-        this@send.send(ProducerRecord(topic, key, value)).get()
-    }
+private fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?): RecordMetadata {
+    return this@send.send(ProducerRecord(topic, key, value)).get()
 }
 
 private fun createAdmin(bootstrapServers: String): AdminClient {
@@ -253,8 +291,9 @@ private fun createAdmin(bootstrapServers: String): AdminClient {
     return AdminClient.create(props)
 }
 
-private fun AdminClient.getOffset(topic: String, groupId: String): Long {
-    val offsets = this.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get()
+private fun ConfluentKafkaContainer.getOffset(topic: String, groupId: String): Long {
+    val admin = createAdmin(bootstrapServers)
+    val offsets = admin.listConsumerGroupOffsets(groupId).partitionsToOffsetAndMetadata().get()
     val partition =
         offsets.keys.find { it.topic() == topic } ?: throw IllegalStateException("Found no topic \"$topic\"")
     return offsets[partition]?.offset() ?: throw IllegalStateException("Found no offset for topic \"$topic\"")

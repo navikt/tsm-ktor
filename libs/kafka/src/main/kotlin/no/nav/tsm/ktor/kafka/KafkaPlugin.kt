@@ -50,6 +50,7 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                                             "Topic $topic was subscribed, but found no configuration with onRecord for it."
                                         }
 
+                                        val meta = record.toRecordMeta()
                                         val value = record.value()
                                         if (value == null) {
                                             logger.debug("Received tombstone for key ${record.key()} on topic $topic")
@@ -59,7 +60,7 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                                         }
 
                                         try {
-                                            handler.handleRecord(value)
+                                            handler.handleRecord(value, meta)
                                             consumer.commitSync(topic, record)
                                         } catch (ex: Exception) {
                                             logger.error(
@@ -75,12 +76,12 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                                 logger.info("Kafka consumer cancelled gracefully (application stopping)", ex)
                             } catch (ex: KafkaParseException) {
                                 unsubscribeAndRetry(
-                                    "Parsing of record on topic ${ex.topic} failed, retrying after ${pluginConfig.retryDuration}",
+                                    "Parsing of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
                                     ex,
                                 )
                             } catch (ex: KafkaHandlerException) {
                                 unsubscribeAndRetry(
-                                    "Handling of record on topic ${ex.topic} failed, retrying after ${pluginConfig.retryDuration}",
+                                    "Handling of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
                                     ex,
                                 )
                             } catch (ex: Exception) {
