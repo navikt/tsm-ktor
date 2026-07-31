@@ -1,10 +1,12 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.consumer
 
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
 import java.util.*
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.*
+import no.nav.tsm.ktor.kafka.config.kafkaConfig
+import no.nav.tsm.ktor.kafka.config.kafkaObjectMapper
 import no.nav.tsm.ktor.logger
 
 /**

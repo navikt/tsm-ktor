@@ -11,6 +11,8 @@ import java.util.*
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import no.nav.tsm.ktor.kafka.consumer.KafkaConsumer
+import no.nav.tsm.ktor.kafka.consumer.RecordMeta
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic

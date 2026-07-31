@@ -1,4 +1,4 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.consumer
 
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.Headers

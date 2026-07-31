@@ -1,4 +1,4 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.consumer
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.Module
@@ -7,9 +7,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-@DslMarker annotation class KafkaConsumerDsl
-
-@KafkaConsumerDsl
 class KafkaConsumerPluginConfig {
     lateinit var groupId: String
     var pollDuration: Duration = 10.seconds

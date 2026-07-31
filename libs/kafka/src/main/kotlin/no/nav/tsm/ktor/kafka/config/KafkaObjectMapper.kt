@@ -1,4 +1,4 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.config
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.SerializationFeature

@@ -1,7 +1,7 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.consumer
 
 import java.time.Duration
-import kotlin.collections.set
+import no.nav.tsm.ktor.kafka.config.KafkaConfig
 import no.nav.tsm.ktor.logger
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -12,7 +12,7 @@ import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 
-class ByteArrayConsumer(
+internal class ByteArrayConsumer(
     groupId: String,
     config: KafkaConfig,
 ) {

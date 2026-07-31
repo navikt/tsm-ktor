@@ -1,4 +1,4 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.config
 
 import com.typesafe.config.ConfigException
 import io.ktor.server.application.Application
@@ -55,7 +55,6 @@ fun ApplicationConfig.kafkaConfig(): KafkaConfig {
     } catch (_: ConfigException.Missing) {
         return autoConfig()
     }
-
 
     return autoConfig()
 }

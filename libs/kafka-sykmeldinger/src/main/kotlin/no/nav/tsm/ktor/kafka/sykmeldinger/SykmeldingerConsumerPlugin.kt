@@ -1,7 +1,7 @@
 package no.nav.tsm.ktor.kafka.sykmeldinger
 
 import io.ktor.server.application.*
-import no.nav.tsm.ktor.kafka.KafkaConsumer
+import no.nav.tsm.ktor.kafka.consumer.KafkaConsumer
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.sykmelding.input.core.model.SykmeldingModule
 import no.nav.tsm.sykmelding.input.core.model.SykmeldingRecord
