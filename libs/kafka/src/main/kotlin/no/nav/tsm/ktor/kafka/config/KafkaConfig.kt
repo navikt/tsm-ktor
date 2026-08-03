@@ -11,9 +11,11 @@ import no.nav.tsm.ktor.nais.getRuntimeCluster
 private val logger = logger()
 
 sealed interface KafkaConfig {
+    val clientId: String
+
     fun toProperties(): Properties
 
-    class Local(val bootstrapServers: String = "localhost:9092") : KafkaConfig {
+    class Local(override val clientId: String, val bootstrapServers: String = "localhost:9092") : KafkaConfig {
         override fun toProperties() =
             Properties().apply {
                 put("bootstrap.servers", bootstrapServers)
@@ -22,6 +24,7 @@ sealed interface KafkaConfig {
     }
 
     class Cloud(
+        override val clientId: String,
         val bootstrapServers: String,
         val truststoreLocation: String,
         val truststorePassword: String,
@@ -41,30 +44,30 @@ sealed interface KafkaConfig {
             }
     }
 
-    class Raw(val config: Map<String, Any?>) : KafkaConfig {
+    class Raw(override val clientId: String, val config: Map<String, Any?>) : KafkaConfig {
         override fun toProperties() = Properties().apply { putAll(config) }
     }
 }
 
-fun ApplicationConfig.kafkaConfig(): KafkaConfig {
+internal fun ApplicationConfig.kafkaConfig(clientId: String): KafkaConfig {
     try {
         val confConfig = this.config("kafka.config").toMap()
         if (confConfig.isNotEmpty()) {
-            return KafkaConfig.Raw(confConfig)
+            return KafkaConfig.Raw(clientId, confConfig)
         }
     } catch (_: ConfigException.Missing) {
-        return autoConfig()
+        return autoConfig(clientId)
     }
 
-    return autoConfig()
+    return autoConfig(clientId)
 }
 
-fun Application.kafkaConfig(): KafkaConfig = environment.config.kafkaConfig()
+internal fun Application.kafkaConfig(clientId: String): KafkaConfig = environment.config.kafkaConfig(clientId)
 
-private fun autoConfig(): KafkaConfig =
+private fun autoConfig(clientId: String): KafkaConfig =
     if (getRuntimeCluster() === RuntimeCluster.LOCAL) {
         logger.info("Kafka: In local runtime, using local Kafka config")
-        KafkaConfig.Local(bootstrapServers = System.getenv("BOOTSTRAP_SERVERS") ?: "localhost:9092")
+        KafkaConfig.Local(clientId, bootstrapServers = System.getenv("BOOTSTRAP_SERVERS") ?: "localhost:9092")
     } else {
         logger.info("Kafka: In cloud runtime, using cloud Kafka config")
 
@@ -73,6 +76,7 @@ private fun autoConfig(): KafkaConfig =
         }
 
         KafkaConfig.Cloud(
+            clientId,
             bootstrapServers = getEnv("KAFKA_BROKERS"),
             truststoreLocation = getEnv("KAFKA_TRUSTSTORE_PATH"),
             truststorePassword = getEnv("KAFKA_CREDSTORE_PASSWORD"),

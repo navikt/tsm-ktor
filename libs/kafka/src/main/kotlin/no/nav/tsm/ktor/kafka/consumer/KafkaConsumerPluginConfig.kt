@@ -8,6 +8,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class KafkaConsumerPluginConfig {
+    /** Used internally in kafka for tracing and logging, set it to the pod name. */
+    lateinit var clientId: String
+    /** Used to identify the consumer group this consumer belongs to. */
     lateinit var groupId: String
     var pollDuration: Duration = 10.seconds
     var retryDuration: Duration = 60.seconds

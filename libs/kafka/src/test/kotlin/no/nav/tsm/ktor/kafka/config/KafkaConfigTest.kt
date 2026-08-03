@@ -4,8 +4,8 @@ import com.typesafe.config.ConfigFactory
 import io.kotest.matchers.equals.shouldEqual
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.types.shouldBeTypeOf
-import io.ktor.server.config.HoconApplicationConfig
-import io.ktor.server.testing.testApplication
+import io.ktor.server.config.*
+import io.ktor.server.testing.*
 import kotlin.test.Test
 
 class KafkaConfigTest {
@@ -30,7 +30,7 @@ class KafkaConfigTest {
         }
 
         application {
-            val config = kafkaConfig()
+            val config = kafkaConfig("test-client-id")
             config.shouldBeTypeOf<KafkaConfig.Raw>()
 
             val kafkaConfig = config.toProperties()
@@ -49,7 +49,7 @@ class KafkaConfigTest {
     @Test
     fun `should auto load kafka config when no conf-file configuration`() = testApplication {
         application {
-            val config = kafkaConfig()
+            val config = kafkaConfig("test-client-id")
             config.shouldBeTypeOf<KafkaConfig.Local>()
 
             val kafkaConfig = config.toProperties()

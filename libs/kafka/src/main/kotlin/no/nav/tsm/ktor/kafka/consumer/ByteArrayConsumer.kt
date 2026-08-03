@@ -13,6 +13,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 
 internal class ByteArrayConsumer(
+    clientId: String,
     groupId: String,
     config: KafkaConfig,
 ) {
@@ -22,6 +23,7 @@ internal class ByteArrayConsumer(
     init {
         val kafkaConfig =
             config.toProperties().apply {
+                this[ConsumerConfig.CLIENT_ID_CONFIG] = clientId
                 this[ConsumerConfig.GROUP_ID_CONFIG] = groupId
                 this[ConsumerConfig.AUTO_OFFSET_RESET_CONFIG] = "earliest"
                 this[ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG] = "false"
