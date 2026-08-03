@@ -79,6 +79,64 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
     }
 
     @Test
+    fun `when record fails and shouldSkip returns true, skip it (poison pill)`() = testApplication {
+        initKafkaConfig()
+
+        val tombstoneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
+        val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
+
+        install(KafkaConsumer) {
+            clientId = "test-client-id"
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            consume<MyRecord>(
+                name = "example-topic",
+                onTombstone = { meta ->
+                    tombstoneMock(meta)
+                },
+                onRecord = { record ->
+                    recordMock(record)
+                },
+                shouldSkip = { meta ->
+                    meta.key == "test-key-2"
+                }
+            )
+        }
+
+        startApplication()
+
+        producer.send(
+            topic = "example-topic",
+            key = "test-key",
+            value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        producer.send(
+            topic = "example-topic",
+            key = "test-key-2",
+            value = """{"sykmeldingId":"125","poop":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        val lastRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = null,
+            )
+
+        verify(timeout = 5000) { tombstoneMock(any()) }
+        verifyOrder {
+            recordMock(MyRecord("124", "abc", true))
+            tombstoneMock(match { it.key == "test-key" })
+        }
+
+        eventually(5.seconds) {
+            val offset = getOffset("example-topic", "test-group-id")
+            offset shouldEqual (lastRecord.offset() + 1L)
+        }
+    }
+
+    @Test
     fun `when record parsing fails, should not commit and should retry`() = testApplication {
         initKafkaConfig()
 

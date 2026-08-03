@@ -24,14 +24,16 @@ class KafkaConsumerPluginConfig {
         name: String,
         noinline onRecord: suspend (RecordType) -> Unit,
         noinline onTombstone: suspend (RecordMeta) -> Unit,
+        noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
     ) {
-        topics += onRecord(name, onRecord, onTombstone)
+        topics += onRecord(name, onRecord, onTombstone, shouldSkip)
     }
 
     inline fun <reified RecordType : Any> consume(
         name: String,
         noinline onRecord: (RecordType, RecordMeta) -> Unit,
         noinline onTombstone: (RecordMeta) -> Unit,
+        noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
     ) {
         topics += onRecord(name, onRecord, onTombstone)
     }
@@ -40,6 +42,7 @@ class KafkaConsumerPluginConfig {
 sealed interface KafkaTopic<RecordType : Any> {
     val topic: String
     val onTombstone: suspend (RecordMeta) -> Unit
+    val shouldSkip: (suspend (RecordMeta) -> Boolean)?
 
     suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
 
@@ -48,6 +51,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         val onRecord: suspend (RecordType) -> Unit,
         override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
+        override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
     ) : KafkaTopic<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
@@ -70,6 +74,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         val onRecord: suspend (value: RecordType, meta: RecordMeta) -> Unit,
         override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
+        override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
     ) : KafkaTopic<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =

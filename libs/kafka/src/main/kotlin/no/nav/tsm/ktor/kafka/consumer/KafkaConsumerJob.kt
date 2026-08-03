@@ -89,9 +89,23 @@ private constructor(
                                 continue
                             }
 
-                            handler.handleRecord(value, meta, objectMapper)
-                            /* If handleRecord fails, sync is skipped and error propagates to  KafkaHandlerException */
-                            consumer.commitSync(topic, record)
+                            try {
+                                handler.handleRecord(value, meta, objectMapper)
+                                /* If handleRecord fails, sync is skipped and error propagates to  KafkaHandlerException */
+                                consumer.commitSync(topic, record)
+                            } catch (ex: Exception) {
+                                if (handler.shouldSkip?.invoke(meta) == true) {
+                                    logger.info(
+                                        "Record ${meta.key} on topic ${meta.topic} failed with exception, but shouldSkip returned true, skipping",
+                                        ex,
+                                    )
+                                    consumer.commitSync(topic, record)
+                                }
+
+                                // No shouldSkip configured, or shouldSkip returned false, proceed with normal error
+                                // handling
+                                throw ex
+                            }
                         }
                     }
                 } catch (ex: CancellationException) {
