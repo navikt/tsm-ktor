@@ -305,6 +305,12 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
             consume<MyRecord>(
                 name = "example-topic",
                 onTombstone = {},
+                onRecord = { record -> recordMock(record) },
+            )
+
+            consume<MyRecord>(
+                name = "example-topic",
+                onTombstone = { _, _ -> },
                 onRecord = { value, meta ->
                     recordMock(value)
                     metaMock(meta)
