@@ -2,12 +2,9 @@ package no.nav.tsm.ktor.kafka.consumer
 
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
-import io.ktor.server.plugins.di.dependencies
 import java.util.*
 import kotlinx.coroutines.*
-import no.nav.tsm.ktor.kafka.config.KafkaBase
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
-import no.nav.tsm.ktor.kafka.config.kafkaConfig
 
 /**
  * Installs a consumer and attaches to the Ktor life-cycle. The consumer can subscribe to many topics with each their
@@ -21,22 +18,25 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
         createApplicationPlugin(name = "KafkaConsumer-${UUID.randomUUID()}", ::KafkaConsumerPluginConfig) {
             try {
                 /** The base plugin can have been installed by one of the other plugins, which is fine. */
-                application.install(KafkaBase) {
+                application.install(KafkaConfig) {
                     clientId = pluginConfig.clientId
                 }
             } catch (_: DuplicatePluginException) {
                 // Already installed, no worries
             }
 
-            val kafkaConfig: KafkaConfig by application.dependencies
-            val configuredTopics: List<String> = pluginConfig.topics.map { it.topic }
-            val byteArrayConsumer =
-                ByteArrayConsumer(
-                    pluginConfig.clientId,
-                    pluginConfig.groupId,
-                    kafkaConfig,
+            val job =
+                KafkaConsumerJob.initConsumerJob(
+                    application = application,
+                    handlers = pluginConfig.topics,
+                    jobConfig =
+                        KafkaConsumerJobConfig(
+                            groupId = pluginConfig.groupId,
+                            pollDuration = pluginConfig.pollDuration,
+                            retryDuration = pluginConfig.retryDuration,
+                            jacksonModules = pluginConfig.jacksonModules.toMutableList(),
+                        ),
                 )
-            val job = KafkaConsumerJob(configuredTopics, byteArrayConsumer, pluginConfig)
 
             on(MonitoringEvent(ApplicationStarted)) { application ->
                 application.launch {

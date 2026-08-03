@@ -3,7 +3,6 @@ package no.nav.tsm.ktor.kafka.consumer
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.Module
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -26,13 +25,7 @@ class KafkaConsumerPluginConfig {
         noinline onRecord: suspend (RecordType) -> Unit,
         noinline onTombstone: suspend (RecordMeta) -> Unit,
     ) {
-        topics +=
-            KafkaTopic.Record(
-                topic = name,
-                onRecord = onRecord,
-                onTombstone = onTombstone,
-                jacksonRef = jacksonTypeRef<RecordType>(),
-            )
+        topics += onRecord(name, onRecord, onTombstone)
     }
 
     inline fun <reified RecordType : Any> consume(
@@ -40,13 +33,7 @@ class KafkaConsumerPluginConfig {
         noinline onRecord: (RecordType, RecordMeta) -> Unit,
         noinline onTombstone: (RecordMeta) -> Unit,
     ) {
-        topics +=
-            KafkaTopic.WithMeta(
-                topic = name,
-                onRecord = onRecord,
-                onTombstone = onTombstone,
-                jacksonRef = jacksonTypeRef<RecordType>(),
-            )
+        topics += onRecord(name, onRecord, onTombstone)
     }
 }
 

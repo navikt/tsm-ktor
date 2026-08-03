@@ -12,11 +12,11 @@ class KafkaBasePluginTest {
 
     @Test
     fun `should be installable`() = testApplication {
-        application.install(KafkaBase) {
+        application.install(KafkaConfig) {
             clientId = "test-client"
         }
 
-        val config: KafkaConfig by application.dependencies
+        val config: InternalKafkaConfig by application.dependencies
 
         config.clientId shouldEqual "test-client"
         config.toProperties()["bootstrap.servers"] shouldEqual "localhost:9092"
@@ -41,11 +41,11 @@ class KafkaBasePluginTest {
                 )
         }
 
-        application.install(KafkaBase) {
+        application.install(KafkaConfig) {
             clientId = "test-client"
         }
 
-        val config: KafkaConfig by application.dependencies
+        val config: InternalKafkaConfig by application.dependencies
         val properties = config.toProperties()
 
         config.clientId shouldEqual "test-client"

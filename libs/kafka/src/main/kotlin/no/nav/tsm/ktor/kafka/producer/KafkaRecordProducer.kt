@@ -1,7 +1,9 @@
 package no.nav.tsm.ktor.kafka.producer
 
 import com.fasterxml.jackson.databind.Module
-import no.nav.tsm.ktor.kafka.config.KafkaConfig
+import io.ktor.server.application.Application
+import io.ktor.server.plugins.di.dependencies
+import no.nav.tsm.ktor.kafka.config.InternalKafkaConfig
 import no.nav.tsm.ktor.kafka.config.kafkaObjectMapper
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -10,11 +12,29 @@ import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.Serializer
 import org.apache.kafka.common.serialization.StringSerializer
 
-class KafkaRecordProducer<Payload>(
+class KafkaRecordProducer<Payload>
+private constructor(
     private val topic: String,
-    config: KafkaConfig,
+    config: InternalKafkaConfig,
     jacksonModules: List<Module> = emptyList(),
 ) {
+    companion object {
+        /** Automatically inject kafka config and initialize a KafkaRecordProducer */
+        fun <Payload> initProducer(
+            application: Application,
+            topic: String,
+            jacksonModules: List<Module> = emptyList(),
+        ): KafkaRecordProducer<Payload> {
+            val config: InternalKafkaConfig by application.dependencies
+
+            return KafkaRecordProducer(
+                topic = topic,
+                config = config,
+                jacksonModules = jacksonModules,
+            )
+        }
+    }
+
     private val producer: KafkaProducer<String, Payload>
     private val objectMapper =
         kafkaObjectMapper().apply {

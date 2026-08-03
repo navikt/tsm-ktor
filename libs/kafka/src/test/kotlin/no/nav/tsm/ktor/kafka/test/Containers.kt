@@ -9,6 +9,8 @@ import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -74,4 +76,8 @@ open class WithKafkaContainer(topics: List<String>) {
         val admin = createAdmin()
         admin.createTopics(topics.map { NewTopic(it, 1, 1) }).all().get()
     }
+}
+
+fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?): RecordMetadata {
+    return this@send.send(ProducerRecord(topic, key, value)).get()
 }

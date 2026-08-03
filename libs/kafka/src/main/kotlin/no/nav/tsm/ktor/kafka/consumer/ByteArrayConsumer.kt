@@ -1,7 +1,7 @@
 package no.nav.tsm.ktor.kafka.consumer
 
 import java.time.Duration
-import no.nav.tsm.ktor.kafka.config.KafkaConfig
+import no.nav.tsm.ktor.kafka.config.InternalKafkaConfig
 import no.nav.tsm.ktor.logger
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -15,7 +15,7 @@ import org.apache.kafka.common.serialization.StringDeserializer
 internal class ByteArrayConsumer(
     clientId: String,
     groupId: String,
-    config: KafkaConfig,
+    config: InternalKafkaConfig,
 ) {
     private val logger = logger()
     private val consumer: KafkaConsumer<String, ByteArray?>

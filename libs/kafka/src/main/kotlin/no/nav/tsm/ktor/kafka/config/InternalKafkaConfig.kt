@@ -10,12 +10,12 @@ import no.nav.tsm.ktor.nais.getRuntimeCluster
 
 private val logger = logger()
 
-sealed interface KafkaConfig {
+internal sealed interface InternalKafkaConfig {
     val clientId: String
 
     fun toProperties(): Properties
 
-    class Local(override val clientId: String, val bootstrapServers: String = "localhost:9092") : KafkaConfig {
+    class Local(override val clientId: String, val bootstrapServers: String = "localhost:9092") : InternalKafkaConfig {
         override fun toProperties() =
             Properties().apply {
                 put("bootstrap.servers", bootstrapServers)
@@ -30,7 +30,7 @@ sealed interface KafkaConfig {
         val truststorePassword: String,
         val keystoreLocation: String,
         val keystorePassword: String,
-    ) : KafkaConfig {
+    ) : InternalKafkaConfig {
         override fun toProperties() =
             Properties().apply {
                 put("bootstrap.servers", bootstrapServers)
@@ -44,16 +44,16 @@ sealed interface KafkaConfig {
             }
     }
 
-    class Raw(override val clientId: String, val config: Map<String, Any?>) : KafkaConfig {
+    class Raw(override val clientId: String, val config: Map<String, Any?>) : InternalKafkaConfig {
         override fun toProperties() = Properties().apply { putAll(config) }
     }
 }
 
-internal fun ApplicationConfig.kafkaConfig(clientId: String): KafkaConfig {
+internal fun ApplicationConfig.kafkaConfig(clientId: String): InternalKafkaConfig {
     try {
         val confConfig = this.config("kafka.config").toMap()
         if (confConfig.isNotEmpty()) {
-            return KafkaConfig.Raw(clientId, confConfig)
+            return InternalKafkaConfig.Raw(clientId, confConfig)
         }
     } catch (_: ConfigException.Missing) {
         return autoConfig(clientId)
@@ -62,12 +62,12 @@ internal fun ApplicationConfig.kafkaConfig(clientId: String): KafkaConfig {
     return autoConfig(clientId)
 }
 
-internal fun Application.kafkaConfig(clientId: String): KafkaConfig = environment.config.kafkaConfig(clientId)
+internal fun Application.kafkaConfig(clientId: String): InternalKafkaConfig = environment.config.kafkaConfig(clientId)
 
-private fun autoConfig(clientId: String): KafkaConfig =
+private fun autoConfig(clientId: String): InternalKafkaConfig =
     if (getRuntimeCluster() === RuntimeCluster.LOCAL) {
         logger.info("Kafka: In local runtime, using local Kafka config")
-        KafkaConfig.Local(clientId, bootstrapServers = System.getenv("BOOTSTRAP_SERVERS") ?: "localhost:9092")
+        InternalKafkaConfig.Local(clientId, bootstrapServers = System.getenv("BOOTSTRAP_SERVERS") ?: "localhost:9092")
     } else {
         logger.info("Kafka: In cloud runtime, using cloud Kafka config")
 
@@ -75,7 +75,7 @@ private fun autoConfig(clientId: String): KafkaConfig =
             System.getenv(env) ?: throw MissingNaisEnvException(env)
         }
 
-        KafkaConfig.Cloud(
+        InternalKafkaConfig.Cloud(
             clientId,
             bootstrapServers = getEnv("KAFKA_BROKERS"),
             truststoreLocation = getEnv("KAFKA_TRUSTSTORE_PATH"),

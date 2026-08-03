@@ -8,7 +8,7 @@ import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 
-class KafkaConfigTest {
+class InternalKafkaConfigTest {
 
     @Test
     fun `should load kafka config from configuration when provided`() = testApplication {
@@ -31,7 +31,7 @@ class KafkaConfigTest {
 
         application {
             val config = kafkaConfig("test-client-id")
-            config.shouldBeTypeOf<KafkaConfig.Raw>()
+            config.shouldBeTypeOf<InternalKafkaConfig.Raw>()
 
             val kafkaConfig = config.toProperties()
             kafkaConfig.shouldNotBeNull()
@@ -50,7 +50,7 @@ class KafkaConfigTest {
     fun `should auto load kafka config when no conf-file configuration`() = testApplication {
         application {
             val config = kafkaConfig("test-client-id")
-            config.shouldBeTypeOf<KafkaConfig.Local>()
+            config.shouldBeTypeOf<InternalKafkaConfig.Local>()
 
             val kafkaConfig = config.toProperties()
             kafkaConfig.shouldNotBeNull()

@@ -10,9 +10,8 @@ import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import no.nav.tsm.ktor.kafka.test.WithKafkaContainer
+import no.nav.tsm.ktor.kafka.test.send
 import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.clients.producer.RecordMetadata
 
 private data class MyRecord(
     val sykmeldingId: String,
@@ -21,7 +20,7 @@ private data class MyRecord(
 )
 
 class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-topic")) {
-    val producer = createTestProducer()
+    val producer: KafkaProducer<String, ByteArray> = createTestProducer()
 
     @Test
     fun `simple config and producer tests with records and tombstone`() = testApplication {
@@ -331,8 +330,4 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
             offset shouldEqual (lastRecord.offset() + 1L)
         }
     }
-}
-
-private fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?): RecordMetadata {
-    return this@send.send(ProducerRecord(topic, key, value)).get()
 }

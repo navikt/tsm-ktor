@@ -1,25 +1,64 @@
 package no.nav.tsm.ktor.kafka.consumer
 
+import com.fasterxml.jackson.databind.Module
+import io.ktor.server.application.Application
+import io.ktor.server.plugins.di.dependencies
+import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import no.nav.tsm.ktor.kafka.config.InternalKafkaConfig
 import no.nav.tsm.ktor.kafka.config.kafkaObjectMapper
 import no.nav.tsm.ktor.logger
 
+internal class KafkaConsumerJobConfig(
+    val groupId: String,
+    val pollDuration: Duration,
+    val retryDuration: Duration,
+    val jacksonModules: MutableList<Module> = mutableListOf(),
+)
+
 /** Startable and stoppable consumer with manual committing and retry-mechanisms. */
-internal class KafkaConsumerJob(
-    val topics: List<String>,
-    val consumer: ByteArrayConsumer,
-    val pluginConfig: KafkaConsumerPluginConfig,
+class KafkaConsumerJob
+private constructor(
+    private val handlers: List<KafkaTopic<*>>,
+    private val jobConfig: KafkaConsumerJobConfig,
+    kafkaConfig: InternalKafkaConfig,
 ) {
-    val logger = logger()
-    val objectMapper =
-        kafkaObjectMapper().apply {
-            pluginConfig.jacksonModules.forEach { registerModule(it) }
+    companion object {
+        private val logger = logger()
+
+        /** Automatically inject kafka config and initialize a KafkaConsumerJob */
+        internal fun initConsumerJob(
+            application: Application,
+            handlers: List<KafkaTopic<*>>,
+            jobConfig: KafkaConsumerJobConfig,
+        ): KafkaConsumerJob {
+            val kafkaConfig: InternalKafkaConfig by application.dependencies
+
+            return KafkaConsumerJob(
+                handlers = handlers,
+                kafkaConfig = kafkaConfig,
+                jobConfig = jobConfig,
+            )
         }
+    }
+
+    private val topics = handlers.map { it.topic }
+    private val objectMapper =
+        kafkaObjectMapper().apply {
+            jobConfig.jacksonModules.forEach { registerModule(it) }
+        }
+
+    private val consumer: ByteArrayConsumer =
+        ByteArrayConsumer(
+            kafkaConfig.clientId,
+            jobConfig.groupId,
+            kafkaConfig,
+        )
 
     suspend fun start() =
         withContext(Dispatchers.IO) {
@@ -28,15 +67,15 @@ internal class KafkaConsumerJob(
                 consumer.subscribe(topics)
                 try {
                     while (isActive) {
-                        val records = consumer.poll(pluginConfig.pollDuration.toJavaDuration())
+                        val records = consumer.poll(jobConfig.pollDuration.toJavaDuration())
                         if (records.isEmpty) {
-                            logger.debug("Got no records after ${pluginConfig.pollDuration}, continuing to poll")
+                            logger.debug("Got no records after ${jobConfig.pollDuration}, continuing to poll")
                             continue
                         }
 
                         for (record in records) {
                             val topic = record.topic()
-                            val handler = pluginConfig.topics.find { it.topic == topic }
+                            val handler = handlers.find { it.topic == topic }
                             requireNotNull(handler) {
                                 "Topic $topic was subscribed, but found no configuration with onRecord for it."
                             }
@@ -58,20 +97,11 @@ internal class KafkaConsumerJob(
                 } catch (ex: CancellationException) {
                     logger.debug("Kafka consumer cancelled gracefully (application stopping)", ex)
                 } catch (ex: KafkaParseException) {
-                    unsubscribeAndRetry(
-                        "Parsing of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
-                        ex,
-                    )
+                    unsubscribeAndRetry("Parsing of record (${ex.meta.description()}) failed", ex)
                 } catch (ex: KafkaHandlerException) {
-                    unsubscribeAndRetry(
-                        "Handling of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
-                        ex,
-                    )
+                    unsubscribeAndRetry("Handling of record (${ex.meta.description()}) failed", ex)
                 } catch (ex: Exception) {
-                    unsubscribeAndRetry(
-                        "Unknown error running Kafka consumer, waiting ${pluginConfig.retryDuration} to retry",
-                        ex,
-                    )
+                    unsubscribeAndRetry("Unknown error running Kafka consumer", ex)
                 }
             }
         }
@@ -82,8 +112,8 @@ internal class KafkaConsumerJob(
     }
 
     private suspend fun unsubscribeAndRetry(message: String, cause: Throwable) {
-        logger.error(message, cause)
+        logger.error("${message}, retrying after ${jobConfig.retryDuration}", cause)
         consumer.unsubscribe()
-        delay(pluginConfig.retryDuration)
+        delay(jobConfig.retryDuration)
     }
 }
