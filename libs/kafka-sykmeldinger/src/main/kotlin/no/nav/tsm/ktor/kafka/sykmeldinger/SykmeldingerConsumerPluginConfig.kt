@@ -6,6 +6,8 @@ import no.nav.tsm.ktor.kafka.consumer.RecordMeta
 import no.nav.tsm.sykmelding.input.core.model.SykmeldingRecord
 
 class SykmeldingConsumerPluginConfig {
+    /** Used internally in kafka for tracing and logging, set it to the pod name. */
+    lateinit var clientId: String
     lateinit var groupId: String
     lateinit var onRecord: suspend (SykmeldingRecord) -> Unit
     lateinit var onTombstone: suspend (meta: RecordMeta) -> Unit

@@ -14,6 +14,7 @@ val SykmeldingerConsumer =
         logger.info("Automagic configuration of tsm.sykmeldinge consumer enabled! \uD83D\uDE80")
 
         application.install(KafkaConsumer) {
+            clientId = pluginConfig.clientId
             groupId = pluginConfig.groupId
             retryDuration = pluginConfig.retryDuration
             pollDuration = pluginConfig.pollDuration
