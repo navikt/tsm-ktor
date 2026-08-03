@@ -45,7 +45,7 @@ internal class KafkaConsumerJob(
                             val value = record.value()
                             if (value == null) {
                                 logger.debug("Received tombstone for key ${record.key()} on topic $topic")
-                                handler.onTombstone(record.key())
+                                handler.onTombstone(meta)
                                 consumer.commitSync(topic, record)
                                 continue
                             }

@@ -27,7 +27,7 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
     fun `simple config and producer tests with records and tombstone`() = testApplication {
         initKafkaConfig()
 
-        val tombstoneMock = mockk<(String) -> Unit>(relaxed = true)
+        val tombstoneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
         val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
 
         install(KafkaConsumer) {
@@ -38,8 +38,8 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
             consume<MyRecord>(
                 name = "example-topic",
-                onTombstone = { key ->
-                    tombstoneMock(key)
+                onTombstone = { meta ->
+                    tombstoneMock(meta)
                 },
                 onRecord = { record ->
                     recordMock(record)
@@ -70,7 +70,7 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         verifyOrder {
             recordMock(MyRecord("124", "abc", true))
             recordMock(MyRecord("125", "abc", true))
-            tombstoneMock("test-key")
+            tombstoneMock(match { it.key == "test-key" })
         }
 
         eventually(5.seconds) {
@@ -171,9 +171,9 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
     fun `should support multiple topics`() = testApplication {
         initKafkaConfig()
 
-        val tombOneMock = mockk<(String) -> Unit>(relaxed = true)
+        val tombOneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
         val recordOneMock = mockk<(MyRecord) -> Unit>(relaxed = true)
-        val tombTwoMock = mockk<(String) -> Unit>(relaxed = true)
+        val tombTwoMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
         val recordTwoMock = mockk<(MyRecord) -> Unit>(relaxed = true)
 
         install(KafkaConsumer) {
@@ -184,8 +184,8 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
             consume<MyRecord>(
                 name = "example-topic",
-                onTombstone = { key ->
-                    tombOneMock(key)
+                onTombstone = { meta ->
+                    tombOneMock(meta)
                 },
                 onRecord = { record ->
                     recordOneMock(record)
@@ -230,8 +230,8 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
         verify(timeout = 5000) { recordOneMock(MyRecord("124", "abc", true)) }
         verify(timeout = 5000) { recordTwoMock(MyRecord("124", "abc", true)) }
-        verify(timeout = 5000) { tombOneMock("test-key") }
-        verify(timeout = 5000) { tombTwoMock("test-key") }
+        verify(timeout = 5000) { tombOneMock(match { it.key == "test-key" }) }
+        verify(timeout = 5000) { tombOneMock(match { it.key == "test-key" }) }
 
         eventually(5.seconds) {
             val exampleOffset = getOffset("example-topic", "test-group-id")

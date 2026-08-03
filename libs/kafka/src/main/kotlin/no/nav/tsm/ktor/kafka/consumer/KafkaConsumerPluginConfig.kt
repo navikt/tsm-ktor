@@ -24,7 +24,7 @@ class KafkaConsumerPluginConfig {
     inline fun <reified RecordType : Any> consume(
         name: String,
         noinline onRecord: suspend (RecordType) -> Unit,
-        noinline onTombstone: suspend (key: String) -> Unit,
+        noinline onTombstone: suspend (RecordMeta) -> Unit,
     ) {
         topics +=
             KafkaTopic.Record(
@@ -37,8 +37,8 @@ class KafkaConsumerPluginConfig {
 
     inline fun <reified RecordType : Any> consume(
         name: String,
-        noinline onRecord: (value: RecordType, meta: RecordMeta) -> Unit,
-        noinline onTombstone: (key: String) -> Unit,
+        noinline onRecord: (RecordType, RecordMeta) -> Unit,
+        noinline onTombstone: (RecordMeta) -> Unit,
     ) {
         topics +=
             KafkaTopic.WithMeta(
@@ -52,14 +52,14 @@ class KafkaConsumerPluginConfig {
 
 sealed interface KafkaTopic<RecordType : Any> {
     val topic: String
-    val onTombstone: suspend (key: String) -> Unit
+    val onTombstone: suspend (RecordMeta) -> Unit
 
     suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
 
     class Record<RecordType : Any>(
         override val topic: String,
-        val onRecord: suspend (record: RecordType) -> Unit,
-        override val onTombstone: suspend (key: String) -> Unit,
+        val onRecord: suspend (RecordType) -> Unit,
+        override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
     ) : KafkaTopic<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
@@ -81,7 +81,7 @@ sealed interface KafkaTopic<RecordType : Any> {
     class WithMeta<RecordType : Any>(
         override val topic: String,
         val onRecord: suspend (value: RecordType, meta: RecordMeta) -> Unit,
-        override val onTombstone: suspend (key: String) -> Unit,
+        override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
     ) : KafkaTopic<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
