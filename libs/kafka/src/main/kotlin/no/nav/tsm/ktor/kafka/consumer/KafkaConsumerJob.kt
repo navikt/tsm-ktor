@@ -56,7 +56,7 @@ internal class KafkaConsumerJob(
                         }
                     }
                 } catch (ex: CancellationException) {
-                    logger.info("Kafka consumer cancelled gracefully (application stopping)", ex)
+                    logger.debug("Kafka consumer cancelled gracefully (application stopping)", ex)
                 } catch (ex: KafkaParseException) {
                     unsubscribeAndRetry(
                         "Parsing of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
@@ -77,7 +77,7 @@ internal class KafkaConsumerJob(
         }
 
     fun stop() {
-        logger.info("Stopping Kafka consumer")
+        logger.debug("Stopping Kafka consumer")
         consumer.unsubscribe()
     }
 
