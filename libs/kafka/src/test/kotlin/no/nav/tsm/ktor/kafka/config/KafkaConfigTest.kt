@@ -1,4 +1,4 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.config
 
 import com.typesafe.config.ConfigFactory
 import io.kotest.matchers.equals.shouldEqual
@@ -7,8 +7,6 @@ import io.kotest.matchers.types.shouldBeTypeOf
 import io.ktor.server.config.HoconApplicationConfig
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
-import no.nav.tsm.ktor.kafka.config.KafkaConfig
-import no.nav.tsm.ktor.kafka.config.kafkaConfig
 
 class KafkaConfigTest {
 

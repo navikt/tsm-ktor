@@ -1,18 +1,17 @@
-package no.nav.tsm.ktor.kafka
+package no.nav.tsm.ktor.kafka.consumer
 
 import com.typesafe.config.ConfigFactory
 import io.kotest.matchers.equals.shouldEqual
-import io.ktor.server.config.*
-import io.ktor.server.testing.*
+import io.ktor.server.config.HoconApplicationConfig
+import io.ktor.server.testing.testApplication
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
-import java.util.*
+import java.util.Properties
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
+import kotlin.use
 import kotlinx.coroutines.delay
-import no.nav.tsm.ktor.kafka.consumer.KafkaConsumer
-import no.nav.tsm.ktor.kafka.consumer.RecordMeta
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
