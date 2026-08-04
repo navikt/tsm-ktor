@@ -8,14 +8,14 @@ import kotlin.time.Duration.Companion.seconds
 
 fun Application.createConsumer(
     groupId: String,
-    handler: KafkaTopic<*>,
+    topic: KafkaTopic<*>,
     pollDuration: Duration = 10.seconds,
     retryDuration: Duration = 60.seconds,
     jacksonModules: List<Module> = emptyList(),
 ) =
     createConsumer(
         groupId = groupId,
-        topics = listOf(handler),
+        topics = listOf(topic),
         pollDuration = pollDuration,
         retryDuration = retryDuration,
         jacksonModules = jacksonModules,

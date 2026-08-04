@@ -33,7 +33,7 @@ class KafkaConsumerDirectTest : WithKafkaContainer(topics = listOf("testy-mc-tes
 
                 createConsumer(
                     groupId = "cool-app-consumer",
-                    handler =
+                    topic =
                         onRecord<Testy>(
                             name = "testy-mc-testy-face",
                             onTombstone = {},
