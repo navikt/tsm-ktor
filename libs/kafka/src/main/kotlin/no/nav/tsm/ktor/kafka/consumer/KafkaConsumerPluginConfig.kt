@@ -9,6 +9,7 @@ import kotlin.time.Duration.Companion.seconds
 class KafkaConsumerPluginConfig {
     /** Used internally in kafka for tracing and logging, set it to the pod name. */
     lateinit var clientId: String
+
     /** Used to identify the consumer group this consumer belongs to. */
     lateinit var groupId: String
     var pollDuration: Duration = 10.seconds
@@ -35,16 +36,26 @@ class KafkaConsumerPluginConfig {
         noinline onTombstone: (RecordMeta) -> Unit,
         noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
     ) {
-        topics += onRecord(name, onRecord, onTombstone)
+        topics += onRecord(name, onRecord, onTombstone, shouldSkip)
+    }
+
+    inline fun <reified RecordType : Any> batched(
+        name: String,
+        noinline onRecords: suspend (value: List<Pair<RecordType?, RecordMeta>>) -> Unit,
+    ) {
+        topics += onRecords(name, onRecords)
     }
 }
 
 sealed interface KafkaTopic<RecordType : Any> {
     val topic: String
-    val onTombstone: suspend (RecordMeta) -> Unit
-    val shouldSkip: (suspend (RecordMeta) -> Boolean)?
 
-    suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
+    interface Unbatched<RecordType : Any> : KafkaTopic<RecordType> {
+        val onTombstone: suspend (RecordMeta) -> Unit
+        val shouldSkip: (suspend (RecordMeta) -> Boolean)?
+
+        suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
+    }
 
     class Record<RecordType : Any>(
         override val topic: String,
@@ -52,7 +63,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
         override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
-    ) : KafkaTopic<RecordType> {
+    ) : Unbatched<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
                 try {
@@ -64,7 +75,7 @@ sealed interface KafkaTopic<RecordType : Any> {
             try {
                 onRecord(parsed)
             } catch (e: Exception) {
-                throw KafkaHandlerException(meta, e)
+                throw KafkaHandlerException(listOf(meta), e)
             }
         }
     }
@@ -75,7 +86,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
         override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
-    ) : KafkaTopic<RecordType> {
+    ) : Unbatched<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed =
                 try {
@@ -87,7 +98,31 @@ sealed interface KafkaTopic<RecordType : Any> {
             try {
                 onRecord(parsed, meta)
             } catch (e: Exception) {
-                throw KafkaHandlerException(meta, e)
+                throw KafkaHandlerException(listOf(meta), e)
+            }
+        }
+    }
+
+    class Batched<RecordType : Any>(
+        override val topic: String,
+        val onRecords: suspend (value: List<Pair<RecordType?, RecordMeta>>) -> Unit,
+        val jacksonRef: TypeReference<RecordType>,
+    ) : KafkaTopic<RecordType> {
+        suspend fun handleRecords(records: List<Pair<ByteArray?, RecordMeta>>, objectMapper: ObjectMapper) {
+            val parsedRecords = records.map { (value, meta) ->
+                val parsed =
+                    try {
+                        value?.let { objectMapper.readValue(it, jacksonRef) }
+                    } catch (e: Exception) {
+                        throw KafkaParseException(meta, e)
+                    }
+                parsed to meta
+            }
+
+            try {
+                onRecords(parsedRecords)
+            } catch (e: Exception) {
+                throw KafkaHandlerException(parsedRecords.map { it.second }, e)
             }
         }
     }
@@ -95,7 +130,7 @@ sealed interface KafkaTopic<RecordType : Any> {
 
 internal class KafkaParseException(val meta: RecordMeta, cause: Throwable? = null) : RuntimeException(cause)
 
-internal class KafkaHandlerException(val meta: RecordMeta, cause: Throwable? = null) : RuntimeException(cause)
+internal class KafkaHandlerException(val meta: List<RecordMeta>, cause: Throwable? = null) : RuntimeException(cause)
 
 internal fun RecordMeta.description(): String {
     return "topic: $topic, partition: $partition, offset: $offset, timestamp: $timestamp"

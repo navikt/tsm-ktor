@@ -11,6 +11,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import no.nav.tsm.ktor.kafka.test.WithKafkaContainer
 import no.nav.tsm.ktor.kafka.test.send
+import no.nav.tsm.ktor.kafka.test.yeet
 import org.apache.kafka.clients.producer.KafkaProducer
 
 private data class MyRecord(
@@ -101,7 +102,7 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
                 },
                 shouldSkip = { meta ->
                     meta.key == "test-key-2"
-                }
+                },
             )
         }
 
@@ -222,6 +223,108 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
         // Let other tests skip this bad record
         forceOffset("example-topic", "test-group-id", willFailRecord.offset() + 1)
+    }
+
+    @Test
+    fun `batched - simple batched tests with records and tombstone`() = testApplication {
+        initKafkaConfig()
+
+        val recordsMock = mockk<(List<MyRecord?>) -> Unit>(relaxed = true)
+
+        install(KafkaConsumer) {
+            clientId = "test-client-id"
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            batched<MyRecord>(
+                name = "example-topic",
+                onRecords = { records ->
+                    recordsMock(records.map { it.first })
+                },
+            )
+        }
+
+        startApplication()
+
+        producer.send(
+            topic = "example-topic",
+            key = "test-key",
+            value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        producer.send(
+            topic = "example-topic",
+            key = "test-key-2",
+            value = """{"sykmeldingId":"125","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        val lastRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = null,
+            )
+
+        verify(timeout = 5000) { recordsMock(any()) }
+        verifyOrder {
+            recordsMock(listOf(MyRecord("124", "abc", true), MyRecord("125", "abc", true), null))
+        }
+
+        eventually(5.seconds) {
+            val offset = getOffset("example-topic", "test-group-id")
+            offset shouldEqual (lastRecord.offset() + 1L)
+        }
+    }
+
+    @Test
+    fun `batched - when parsing fails, should not commit entire batch`() = testApplication {
+        initKafkaConfig()
+
+        install(KafkaConsumer) {
+            clientId = "test-client-id"
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            batched<MyRecord>(
+                name = "example-topic",
+                onRecords = {},
+            )
+        }
+
+        startApplication()
+
+        val firstRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+
+        // Let this one record be processed, or else the test will fail when ran alone
+        delay(1.seconds)
+
+        producer.yeet(
+            topic = "example-topic",
+            key = "test-key",
+            value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        producer.yeet(
+            topic = "example-topic",
+            key = "test-key-2",
+            value = """{"sykmeldingId":"125","tull":"abc","hasManyValues":true}""".toByteArray(),
+        )
+        producer.yeet(
+            topic = "example-topic",
+            key = "test-key",
+            value = null,
+        )
+
+        delay(2.seconds)
+
+        eventually(5.seconds) {
+            val offset = getOffset("example-topic", "test-group-id")
+            offset shouldEqual (firstRecord.offset() + 1L)
+        }
     }
 
     @Test

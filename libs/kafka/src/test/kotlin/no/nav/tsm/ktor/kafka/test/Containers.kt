@@ -9,6 +9,7 @@ import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
@@ -27,7 +28,7 @@ open class WithKafkaContainer(topics: List<String>) {
     fun createTestProducer(): KafkaProducer<String, ByteArray> {
         val props =
             Properties().apply {
-                this["bootstrap.servers"] = kafka.bootstrapServers
+                this[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafka.bootstrapServers
             }
         return KafkaProducer(props, StringSerializer(), ByteArraySerializer())
     }
@@ -79,5 +80,9 @@ open class WithKafkaContainer(topics: List<String>) {
 }
 
 fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?): RecordMetadata {
-    return this@send.send(ProducerRecord(topic, key, value)).get()
+    return this.send(ProducerRecord(topic, key, value)).get()
+}
+
+fun KafkaProducer<String, ByteArray>.yeet(topic: String, key: String, value: ByteArray?) {
+    this.send(ProducerRecord(topic, key, value))
 }

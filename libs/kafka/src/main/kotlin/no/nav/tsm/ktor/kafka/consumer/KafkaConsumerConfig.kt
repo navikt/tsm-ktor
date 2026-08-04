@@ -29,3 +29,13 @@ inline fun <reified RecordType : Any> onRecord(
         jacksonRef = jacksonTypeRef<RecordType>(),
         shouldSkip = shouldSkip,
     )
+
+inline fun <reified RecordType : Any> onRecords(
+    name: String,
+    noinline onRecords: suspend (value: List<Pair<RecordType?, RecordMeta>>) -> Unit,
+) =
+    KafkaTopic.Batched(
+        topic = name,
+        onRecords = onRecords,
+        jacksonRef = jacksonTypeRef<RecordType>(),
+    )
