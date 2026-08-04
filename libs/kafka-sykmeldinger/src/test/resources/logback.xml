@@ -1,4 +1,4 @@
-q<configuration>
+<configuration>
     <root level="INFO">
         <appender-ref ref="PRETTY-CONSOLE"/>
     </root>

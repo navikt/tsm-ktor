@@ -57,8 +57,23 @@ private constructor(
         producer = KafkaProducer(kafkaProperties, StringSerializer(), MessageSerializer())
     }
 
-    fun send(key: String, value: Payload): RecordMetadata {
+    fun send(key: String, value: Payload, headers: Map<String, String> = emptyMap()): RecordMetadata {
         val record = ProducerRecord(topic, key, value)
+
+        record.headers().apply {
+            headers.forEach { (k, v) -> add(k, v.toByteArray()) }
+        }
+
+        return producer.send(record).get()
+    }
+
+    fun tombstone(key: String, headers: Map<String, String> = emptyMap()): RecordMetadata {
+        val record = ProducerRecord<String, Payload>(topic, key, null)
+
+        record.headers().apply {
+            headers.forEach { (k, v) -> add(k, v.toByteArray()) }
+        }
+
         return producer.send(record).get()
     }
 }
