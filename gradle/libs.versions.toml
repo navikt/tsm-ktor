@@ -6,6 +6,8 @@ jackson = "2.22.1"
 otel = "2.29.0"
 slf4j = "2.0.18"
 logback = "1.5.19"
+prometheus = "1.17.0"
+khealth = "3.0.2"
 
 # Kafka
 kafka = "4.3.1"
@@ -27,6 +29,8 @@ slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson"}
 jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson"}
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "prometheus" }
+khealth = { module = "dev.hayden:khealth", version.ref = "khealth" }
 
 # Kafka
 kafka-client = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }

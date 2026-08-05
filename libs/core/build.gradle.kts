@@ -16,8 +16,11 @@ dependencies {
     api(platform(ktorLibs.bom))
     api(ktorLibs.client.core)
     api(ktorLibs.server.di)
+    api(ktorLibs.server.metrics.micrometer)
     api(libs.otel.annotations)
+    api(libs.khealth)
     api(libs.slf4j)
+    api(libs.micrometer.registry.prometheus)
 
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.serialization.jackson)
