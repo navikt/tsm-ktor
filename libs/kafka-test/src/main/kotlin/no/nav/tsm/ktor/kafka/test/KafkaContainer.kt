@@ -15,12 +15,12 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.kafka.ConfluentKafkaContainer
 
 class KafkaContainer(createTopics: List<String>, image: String = "confluentinc/cp-kafka:8.1.0") {
-    private val kafka: ConfluentKafkaContainer = ConfluentKafkaContainer(image)
-    private val conf: Map<String, String>
+    val container: ConfluentKafkaContainer = ConfluentKafkaContainer(image)
+    val config: Map<String, String>
 
     init {
-        kafka.start()
-        conf = mapOf("bootstrap.servers" to kafka.bootstrapServers)
+        container.start()
+        config = mapOf("bootstrap.servers" to container.bootstrapServers)
         createTopics(createTopics)
     }
 
@@ -32,22 +32,19 @@ class KafkaContainer(createTopics: List<String>, image: String = "confluentinc/c
         val hocon =
             """
             |kafka.config {
-            |  "bootstrap.servers" = "${kafka.bootstrapServers}"
+            |  "bootstrap.servers" = "${container.bootstrapServers}"
             |  "security.protocol" = "PLAINTEXT"
             |}
             """
                 .trimMargin()
-
-        println(ConfigFactory.parseString(hocon))
 
         test.environment {
             config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
         }
     }
 
-    fun createAnythingProducer(): KafkaProducer<String, ByteArray> {
-        return KafkaProducer(conf, StringSerializer(), ByteArraySerializer())
-    }
+    fun createAnythingProducer(): KafkaProducer<String, ByteArray> =
+        KafkaProducer(config, StringSerializer(), ByteArraySerializer())
 
     fun getOffset(topic: String, groupId: String): Long {
         val admin = createAdmin()
@@ -71,9 +68,7 @@ class KafkaContainer(createTopics: List<String>, image: String = "confluentinc/c
         admin.createTopics(topics.map { NewTopic(it, 1, 1) }).all().get()
     }
 
-    private fun createAdmin(): AdminClient {
-        return AdminClient.create(conf)
-    }
+    private fun createAdmin(): AdminClient = AdminClient.create(config)
 }
 
 /** Sends a record and waits for the result. */
