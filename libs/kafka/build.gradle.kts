@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jackson.datatype.jsr310)
 
+    testImplementation(project(":libs:kafka-test"))
     testImplementation(ktorLibs.server.testHost)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.kotest.assertions)

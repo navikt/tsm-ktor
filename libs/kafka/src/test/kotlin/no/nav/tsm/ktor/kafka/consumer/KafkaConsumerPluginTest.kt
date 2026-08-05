@@ -9,7 +9,7 @@ import io.mockk.verifyOrder
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
-import no.nav.tsm.ktor.kafka.test.WithKafkaContainer
+import no.nav.tsm.ktor.kafka.test.KafkaContainer
 import no.nav.tsm.ktor.kafka.test.send
 import no.nav.tsm.ktor.kafka.test.yeet
 import org.apache.kafka.clients.producer.KafkaProducer
@@ -20,12 +20,13 @@ private data class MyRecord(
     val hasManyValues: Boolean,
 )
 
-class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-topic")) {
-    val producer: KafkaProducer<String, ByteArray> = createTestProducer()
+class KafkaTest {
+    val kafka = KafkaContainer(createTopics = listOf("example-topic", "other-topic"))
+    val producer: KafkaProducer<String, ByteArray> = kafka.createAnythingProducer()
 
     @Test
     fun `simple config and producer tests with records and tombstone`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val tombstoneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
         val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
@@ -74,14 +75,14 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         }
 
         eventually(5.seconds) {
-            val offset = getOffset("example-topic", "test-group-id")
+            val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
         }
     }
 
     @Test
     fun `when record fails and shouldSkip returns true, skip it (poison pill)`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val tombstoneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
         val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
@@ -132,14 +133,14 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         }
 
         eventually(5.seconds) {
-            val offset = getOffset("example-topic", "test-group-id")
+            val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
         }
     }
 
     @Test
     fun `when record parsing fails, should not commit and should retry`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         install(KafkaConsumer) {
             clientId = "test-client-id"
@@ -170,17 +171,17 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
         delay(2.seconds)
 
-        val offset = getOffset("example-topic", "test-group-id")
+        val offset = kafka.getOffset("example-topic", "test-group-id")
         // Not +1
         offset shouldEqual (badRecord.offset())
 
         // Let other tests skip this bad record
-        forceOffset("example-topic", "test-group-id", badRecord.offset() + 1)
+        kafka.forceOffset("example-topic", "test-group-id", badRecord.offset() + 1)
     }
 
     @Test
     fun `when onRecord fails, should not commit and should retry`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         install(KafkaConsumer) {
             clientId = "test-client-id"
@@ -217,17 +218,17 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
         delay(2.seconds)
 
-        val offset = getOffset("example-topic", "test-group-id")
+        val offset = kafka.getOffset("example-topic", "test-group-id")
         // Not +1
         offset shouldEqual (willFailRecord.offset())
 
         // Let other tests skip this bad record
-        forceOffset("example-topic", "test-group-id", willFailRecord.offset() + 1)
+        kafka.forceOffset("example-topic", "test-group-id", willFailRecord.offset() + 1)
     }
 
     @Test
     fun `batched - simple batched tests with records and tombstone`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val recordsMock = mockk<(List<MyRecord?>) -> Unit>(relaxed = true)
 
@@ -270,14 +271,14 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         }
 
         eventually(5.seconds) {
-            val offset = getOffset("example-topic", "test-group-id")
+            val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
         }
     }
 
     @Test
     fun `batched - when parsing fails, should not commit entire batch`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         install(KafkaConsumer) {
             clientId = "test-client-id"
@@ -322,14 +323,14 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         delay(2.seconds)
 
         eventually(5.seconds) {
-            val offset = getOffset("example-topic", "test-group-id")
+            val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (firstRecord.offset() + 1L)
         }
     }
 
     @Test
     fun `should support multiple topics`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val tombOneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
         val recordOneMock = mockk<(MyRecord) -> Unit>(relaxed = true)
@@ -394,17 +395,17 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         verify(timeout = 5000) { tombOneMock(match { it.key == "test-key" }) }
 
         eventually(5.seconds) {
-            val exampleOffset = getOffset("example-topic", "test-group-id")
+            val exampleOffset = kafka.getOffset("example-topic", "test-group-id")
             exampleOffset shouldEqual lastRecord.offset() + 1L
 
-            val otherOffset = getOffset("other-topic", "test-group-id")
+            val otherOffset = kafka.getOffset("other-topic", "test-group-id")
             otherOffset shouldEqual lastOtherRecord.offset() + 1L
         }
     }
 
     @Test
     fun `should be able to install multiple Kafka consumers`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val oneMock = mockk<(MyRecord) -> Unit>(relaxed = true)
         val twoMock = mockk<(MyRecord) -> Unit>(relaxed = true)
@@ -451,7 +452,7 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
 
     @Test
     fun `consumeRecord should provide record metadata`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
         val metaMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
@@ -487,7 +488,7 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         }
 
         eventually(5.seconds) {
-            val offset = getOffset("example-topic", "test-group-id")
+            val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
         }
     }

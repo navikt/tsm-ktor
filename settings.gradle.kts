@@ -22,5 +22,6 @@ rootProject.name = "tsm-ktor"
 include(":libs:core")
 include(":libs:auth")
 include(":libs:kafka")
+include(":libs:kafka-test")
 include(":libs:kafka-sykmeldinger")
 include(":libs:catalog")

@@ -7,7 +7,7 @@ import io.mockk.verify
 import kotlin.test.Test
 import kotlinx.coroutines.launch
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
-import no.nav.tsm.ktor.kafka.test.WithKafkaContainer
+import no.nav.tsm.ktor.kafka.test.KafkaContainer
 import no.nav.tsm.ktor.kafka.test.send
 import org.apache.kafka.clients.producer.KafkaProducer
 
@@ -16,13 +16,13 @@ private data class Testy(
     val booga: Long,
 )
 
-class KafkaConsumerDirectTest : WithKafkaContainer(topics = listOf("testy-mc-testy-face")) {
-
-    val producer: KafkaProducer<String, ByteArray> = createTestProducer()
+class KafkaConsumerDirectTest {
+    val kafka = KafkaContainer(createTopics = listOf("testy-mc-testy-face"))
+    val producer: KafkaProducer<String, ByteArray> = kafka.createAnythingProducer()
 
     @Test
     fun `should be able to simply create consumer and get raw access to the job`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val onRecordMock = mockk<(Testy) -> Unit>(relaxed = true)
         val job =

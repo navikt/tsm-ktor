@@ -13,20 +13,10 @@ plugins {
 version = file("../version").readText().trim()
 
 dependencies {
-    api(project(":libs:kafka"))
     api(platform(ktorLibs.bom))
-    api(libs.tsm.sykmeldinger.input)
-
-    testImplementation(project(":libs:kafka-test"))
-    testImplementation(ktorLibs.server.testHost)
-    testImplementation(libs.kotlin.test.junit5)
-    testImplementation(libs.kotest.assertions)
-    testImplementation(libs.junit.jupiter.engine)
-    testImplementation(libs.testcontainers.kafka)
-    testImplementation(libs.mockk)
-
-    testRuntimeOnly(libs.logback.classic)
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    api(libs.kafka.client)
+    api(libs.testcontainers.kafka)
+    api(ktorLibs.server.testHost)
 }
 
 java {
@@ -34,10 +24,6 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
         withSourcesJar()
     }
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
 }
 
 tasks {
@@ -58,7 +44,7 @@ publishing {
         create<MavenPublication>("gpr") {
             from(components["java"])
             groupId = "no.nav.tsm"
-            artifactId = "ktor-kafka-sykmeldinger"
+            artifactId = "ktor-kafka-test"
             version = version
         }
     }

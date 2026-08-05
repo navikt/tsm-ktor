@@ -7,18 +7,19 @@ import io.mockk.verify
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import no.nav.tsm.ktor.kafka.consumer.KafkaConsumer
-import no.nav.tsm.ktor.kafka.test.WithKafkaContainer
+import no.nav.tsm.ktor.kafka.test.KafkaContainer
 
 private data class VeryCool(
     val sykmeldingId: String,
     val veryCool: Boolean,
 )
 
-class KafkaProducerPluginTest : WithKafkaContainer(topics = listOf("example-topic", "other-topic")) {
+class KafkaProducerPluginTest {
+    val kafka = KafkaContainer(createTopics = listOf("example-topic", "other-topic"))
 
     @Test
     fun `test producer plugin should produce`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         application.install(KafkaProducer) {
             clientId = "test-client"
@@ -39,7 +40,7 @@ class KafkaProducerPluginTest : WithKafkaContainer(topics = listOf("example-topi
 
     @Test
     fun `KafkaProducer plugin isn't needed if consumer already installed`() = testApplication {
-        initKafkaConfig()
+        kafka.configureKafka(this)
 
         val mock = mockk<(VeryCool) -> Unit>(relaxed = true)
         application.installTestConsumer {

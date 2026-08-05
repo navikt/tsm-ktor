@@ -3,13 +3,10 @@ package no.nav.tsm.ktor.kafka.test
 import com.typesafe.config.ConfigFactory
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
-import java.util.*
 import org.apache.kafka.clients.admin.AdminClient
-import org.apache.kafka.clients.admin.AdminClientConfig
 import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
@@ -17,23 +14,21 @@ import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.kafka.ConfluentKafkaContainer
 
-open class WithKafkaContainer(topics: List<String>) {
-    private val kafka: ConfluentKafkaContainer = ConfluentKafkaContainer("confluentinc/cp-kafka:8.1.0")
+class KafkaContainer(createTopics: List<String>, image: String = "confluentinc/cp-kafka:8.1.0") {
+    private val kafka: ConfluentKafkaContainer = ConfluentKafkaContainer(image)
+    private val conf: Map<String, String>
 
     init {
         kafka.start()
-        createTopics(topics)
+        conf = mapOf("bootstrap.servers" to kafka.bootstrapServers)
+        createTopics(createTopics)
     }
 
-    fun createTestProducer(): KafkaProducer<String, ByteArray> {
-        val props =
-            Properties().apply {
-                this[ProducerConfig.BOOTSTRAP_SERVERS_CONFIG] = kafka.bootstrapServers
-            }
-        return KafkaProducer(props, StringSerializer(), ByteArraySerializer())
-    }
-
-    fun TestApplicationBuilder.initKafkaConfig() {
+    /**
+     * Used early in your 'testApplication'-test to configure the Ktor application with the kafka-testcontainers
+     * instance.
+     */
+    fun configureKafka(test: ApplicationTestBuilder) {
         val hocon =
             """
             |kafka.config {
@@ -43,9 +38,15 @@ open class WithKafkaContainer(topics: List<String>) {
             """
                 .trimMargin()
 
-        environment {
+        println(ConfigFactory.parseString(hocon))
+
+        test.environment {
             config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
         }
+    }
+
+    fun createAnythingProducer(): KafkaProducer<String, ByteArray> {
+        return KafkaProducer(conf, StringSerializer(), ByteArraySerializer())
     }
 
     fun getOffset(topic: String, groupId: String): Long {
@@ -65,24 +66,22 @@ open class WithKafkaContainer(topics: List<String>) {
         admin.alterConsumerGroupOffsets(groupId, mapOf(partition to OffsetAndMetadata(offset))).all().get()
     }
 
-    private fun createAdmin(): AdminClient {
-        val props =
-            Properties().apply {
-                this[AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG] = kafka.bootstrapServers
-            }
-        return AdminClient.create(props)
-    }
-
     private fun createTopics(topics: List<String>) {
         val admin = createAdmin()
         admin.createTopics(topics.map { NewTopic(it, 1, 1) }).all().get()
     }
+
+    private fun createAdmin(): AdminClient {
+        return AdminClient.create(conf)
+    }
 }
 
+/** Sends a record and waits for the result. */
 fun KafkaProducer<String, ByteArray>.send(topic: String, key: String, value: ByteArray?): RecordMetadata {
     return this.send(ProducerRecord(topic, key, value)).get()
 }
 
+/** Sends a record and does not wait for the result. */
 fun KafkaProducer<String, ByteArray>.yeet(topic: String, key: String, value: ByteArray?) {
     this.send(ProducerRecord(topic, key, value))
 }
