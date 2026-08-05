@@ -26,6 +26,8 @@ dependencies {
     implementation(tsmKtorLibs.auth)
     // Optional: If you need to consume from or produce to Kafka
     implementation(tsmKtorLibs.kafka)
+    // Optional: Preconfigured consumer/producer for the sykmelding topics
+    implementation(tsmKtorLibs.kafka.sykmeldinger)
 }
 ```
 
@@ -182,3 +184,28 @@ val job = createConsumer(
 ```
 
 Custom Jackson modules can be registered with `jacksonModule(...)` in the consumer plugin, or the `jacksonModules` parameter on `createProducer`/`createConsumer`.
+
+### kafka-sykmeldinger
+
+Preconfigured consumer and producer for the sykmelding topics, with the right topic names, headers and Jackson modules already in place.
+
+**Consumer** — reads `SykmeldingRecord` from `tsm.sykmeldinger`.
+
+```kotlin
+install(SykmeldingerConsumer) {
+    clientId = env.podName
+    groupId = "tsm-my-app"
+    onRecord = { record -> service.handle(record) }
+    onTombstone = { meta -> service.delete(meta.key) }
+}
+```
+
+**Producer** — writes `SykmeldingRecord` to `tsm.sykmeldinger-input`, keyed on the sykmelding id and with the required `source-app` and `source-namespace` headers set from the NAIS environment.
+
+```kotlin
+install(KafkaProducer) { clientId = env.podName }
+
+val producer = sykmeldingInputProducer()
+producer.send(record)
+producer.tombstone(sykmeldingId)
+```
