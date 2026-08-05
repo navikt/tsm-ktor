@@ -66,6 +66,36 @@ val (token) = texasClient.maskinporten("nhn:hpr/basic")
 logger.error("Body parsing failed", e.failSpan())
 ```
 
+**NAIS monitoring** — installs Prometheus metrics on `/internal/metrics`, liveness on `/internal/health/alive`, readiness on `/internal/health/ready`, shutdown on `/internal/shutdown`, plus call logging with a call-id from `Traceparent` or `X-Request-Id`.
+
+```kotlin
+install(NaisMonitoring)
+```
+
+Optionally add checks that must pass before the endpoints report OK:
+
+```kotlin
+install(NaisMonitoring) {
+    alive { check("self") { true } }
+    ready { check("database") { db.isReady() } }
+}
+```
+
+Matching `nais.yaml`:
+
+```yaml
+liveness:
+  path: /internal/health/alive
+readiness:
+  path: /internal/health/ready
+preStopHook:
+  http:
+    path: /internal/shutdown
+prometheus:
+  enabled: true
+  path: /internal/metrics
+```
+
 ### auth
 
 **Entra authentication** — validates Entra ID tokens. Audience, issuer and JWKS URI default to the `AZURE_*` NAIS environment variables. `autoStub` bypasses validation when running locally.
