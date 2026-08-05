@@ -24,9 +24,9 @@ fun Application.sykmeldingInputProducer(): SykmeldingInputProducer {
 class SykmeldingInputProducer(private val producer: KafkaRecordProducer<SykmeldingRecord>) {
     val info = getRuntimeInfo()
 
-    fun send(key: String, record: SykmeldingRecord) =
+    fun send(record: SykmeldingRecord) =
         producer.send(
-            key,
+            record.sykmelding.id,
             record,
             mapOf(
                 REQUIRED_HEADER_SOURCE_APP to info.appName,
