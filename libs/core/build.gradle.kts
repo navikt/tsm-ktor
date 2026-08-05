@@ -17,6 +17,7 @@ dependencies {
     api(ktorLibs.client.core)
     api(ktorLibs.server.di)
     api(ktorLibs.server.metrics.micrometer)
+    api(ktorLibs.server.callId)
     api(libs.otel.annotations)
     api(libs.khealth)
     api(libs.slf4j)

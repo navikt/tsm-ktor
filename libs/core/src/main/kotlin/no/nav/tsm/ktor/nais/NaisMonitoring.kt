@@ -3,12 +3,18 @@ package no.nav.tsm.ktor.nais
 import dev.hayden.Check
 import dev.hayden.CheckBuilder
 import dev.hayden.KHealth
+import io.ktor.http.HttpHeaders
 import io.ktor.server.application.*
+import io.ktor.server.engine.ShutDownUrl.Companion.ApplicationCallPlugin
 import io.ktor.server.metrics.micrometer.*
+import io.ktor.server.plugins.callid.CallId
+import io.ktor.server.plugins.callid.callIdMdc
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import org.slf4j.event.Level
 
 class NaisMonitoringPluginConfig {
     internal var healthChecks = linkedSetOf<Check>()
@@ -46,6 +52,21 @@ private fun PluginBuilder<NaisMonitoringPluginConfig>.installHealthChecks() {
                 check(it.checkName, it.check)
             }
         }
+    }
+
+    application.install(ApplicationCallPlugin) {
+        shutDownUrl = "/internal/shutdown"
+        exitCodeSupplier = { 0 }
+    }
+
+    application.install(CallId) {
+        retrieveFromHeader("Traceparent")
+        retrieveFromHeader(HttpHeaders.XRequestId)
+    }
+
+    application.install(CallLogging) {
+        level = Level.DEBUG
+        callIdMdc("call-id")
     }
 }
 
