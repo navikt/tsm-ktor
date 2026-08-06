@@ -1,8 +1,5 @@
 package no.nav.tsm.ktor.auth.texas
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategies
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import io.kotest.matchers.equals.shouldEqual
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -15,6 +12,9 @@ import io.ktor.server.testing.testApplication
 import io.ktor.utils.io.ByteReadChannel
 import kotlin.test.Test
 import kotlinx.coroutines.test.runTest
+import tools.jackson.databind.PropertyNamingStrategies
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 class TexasClientTest {
     private val defaultTexasConfig =
@@ -24,9 +24,7 @@ class TexasClientTest {
         )
 
     private val texasResponseMapper =
-        jacksonObjectMapper().apply {
-            setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-        }
+        jacksonMapperBuilder().propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE).build()
 
     @Test
     fun `should exchange token for correct target`() = runTest {

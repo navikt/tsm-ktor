@@ -1,6 +1,5 @@
 package no.nav.tsm.ktor.kafka.consumer
 
-import com.fasterxml.jackson.databind.Module
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.di.dependencies
 import kotlin.time.Duration
@@ -14,12 +13,13 @@ import no.nav.tsm.ktor.kafka.config.InternalKafkaConfig
 import no.nav.tsm.ktor.kafka.config.kafkaObjectMapper
 import no.nav.tsm.ktor.logger
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import tools.jackson.databind.JacksonModule
 
 internal class KafkaConsumerJobConfig(
     val groupId: String,
     val pollDuration: Duration,
     val retryDuration: Duration,
-    val jacksonModules: MutableList<Module> = mutableListOf(),
+    val jacksonModules: MutableList<JacksonModule> = mutableListOf(),
 )
 
 /** Startable and stoppable consumer with manual committing and retry-mechanisms. */
@@ -49,10 +49,7 @@ private constructor(
     }
 
     private val topics = handlers.map { it.topic }
-    private val objectMapper =
-        kafkaObjectMapper().apply {
-            jobConfig.jacksonModules.forEach { registerModule(it) }
-        }
+    private val objectMapper = kafkaObjectMapper.rebuild().addModules(jobConfig.jacksonModules).build()
 
     private val consumer: ByteArrayConsumer =
         ByteArrayConsumer(

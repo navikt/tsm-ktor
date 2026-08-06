@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.4.10"
-jackson = "2.22.1"
+jackson = "3.1.5"
 
 # Core
 otel = "2.29.0"
@@ -13,7 +13,7 @@ khealth = "3.0.2"
 kafka = "4.3.1"
 
 # Kafka Sykmeldinger
-tsm-sykmeldinger-input = "27"
+tsm-sykmeldinger-input = "29"
 
 # Testing
 kotest-assertions = "6.2.2"
@@ -27,8 +27,7 @@ mockk = "1.14.11"
 otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "otel" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
-jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson"}
-jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson"}
+jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson"}
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "prometheus" }
 khealth = { module = "dev.hayden:khealth", version.ref = "khealth" }
 

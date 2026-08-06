@@ -18,7 +18,6 @@ dependencies {
     api(libs.kafka.client)
 
     implementation(libs.jackson.module.kotlin)
-    implementation(libs.jackson.datatype.jsr310)
 
     testImplementation(project(":libs:kafka-test"))
     testImplementation(ktorLibs.server.testHost)

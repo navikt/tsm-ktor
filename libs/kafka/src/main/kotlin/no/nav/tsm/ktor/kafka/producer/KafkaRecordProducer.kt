@@ -1,6 +1,5 @@
 package no.nav.tsm.ktor.kafka.producer
 
-import com.fasterxml.jackson.databind.Module
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.di.dependencies
 import no.nav.tsm.ktor.kafka.config.InternalKafkaConfig
@@ -11,19 +10,20 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.Serializer
 import org.apache.kafka.common.serialization.StringSerializer
+import tools.jackson.databind.JacksonModule
 
 class KafkaRecordProducer<Payload>
 private constructor(
     private val topic: String,
     config: InternalKafkaConfig,
-    jacksonModules: List<Module> = emptyList(),
+    jacksonModules: List<JacksonModule> = emptyList(),
 ) {
     companion object {
         /** Automatically inject kafka config and initialize a KafkaRecordProducer */
         fun <Payload> initProducer(
             application: Application,
             topic: String,
-            jacksonModules: List<Module> = emptyList(),
+            jacksonModules: List<JacksonModule> = emptyList(),
         ): KafkaRecordProducer<Payload> {
             val config: InternalKafkaConfig by application.dependencies
 
@@ -36,10 +36,7 @@ private constructor(
     }
 
     private val producer: KafkaProducer<String, Payload>
-    private val objectMapper =
-        kafkaObjectMapper().apply {
-            jacksonModules.forEach { registerModule(it) }
-        }
+    private val objectMapper = kafkaObjectMapper.rebuild().addModules(jacksonModules).build()
 
     init {
         class MessageSerializer : Serializer<Payload> {

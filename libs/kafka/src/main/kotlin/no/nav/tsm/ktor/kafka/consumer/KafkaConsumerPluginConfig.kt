@@ -1,10 +1,10 @@
 package no.nav.tsm.ktor.kafka.consumer
 
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.Module
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.JacksonModule
+import tools.jackson.databind.ObjectMapper
 
 class KafkaConsumerPluginConfig {
     /** Used internally in kafka for tracing and logging, set it to the pod name. */
@@ -15,9 +15,9 @@ class KafkaConsumerPluginConfig {
     var pollDuration: Duration = 10.seconds
     var retryDuration: Duration = 60.seconds
     val topics: MutableList<KafkaTopic<*>> = mutableListOf()
-    val jacksonModules: MutableList<Module> = mutableListOf()
+    val jacksonModules: MutableList<JacksonModule> = mutableListOf()
 
-    fun jacksonModule(vararg module: Module) {
+    fun jacksonModule(vararg module: JacksonModule) {
         jacksonModules += module
     }
 

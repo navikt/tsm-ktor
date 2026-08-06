@@ -1,8 +1,8 @@
 package no.nav.tsm.ktor.kafka.producer
 
-import com.fasterxml.jackson.databind.Module
 import io.ktor.server.application.*
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
+import tools.jackson.databind.JacksonModule
 
 class KafkaProducerPluginConfig {
     lateinit var clientId: String
@@ -22,7 +22,7 @@ val KafkaProducer =
 
 fun <Payload> Application.createProducer(
     topic: String,
-    jacksonModules: List<Module> = emptyList(),
+    jacksonModules: List<JacksonModule> = emptyList(),
 ) =
     KafkaRecordProducer.initProducer<Payload>(
         application = this,

@@ -24,7 +24,7 @@ dependencies {
     api(libs.micrometer.registry.prometheus)
 
     implementation(ktorLibs.client.contentNegotiation)
-    implementation(ktorLibs.serialization.jackson)
+    implementation(ktorLibs.serialization.jackson3)
 
     testImplementation(ktorLibs.server.testHost)
     testImplementation(ktorLibs.client.mock)

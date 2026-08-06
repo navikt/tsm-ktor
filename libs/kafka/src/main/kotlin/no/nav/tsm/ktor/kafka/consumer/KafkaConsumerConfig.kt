@@ -1,6 +1,6 @@
 package no.nav.tsm.ktor.kafka.consumer
 
-import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
+import tools.jackson.module.kotlin.jacksonTypeRef
 
 inline fun <reified RecordType : Any> onRecord(
     name: String,
