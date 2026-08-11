@@ -492,4 +492,46 @@ class KafkaTest {
             offset shouldEqual (lastRecord.offset() + 1L)
         }
     }
+
+    @Test
+    fun `records with byte array null should correctly invoke onTombstone`() = testApplication {
+        kafka.configureKafka(this)
+
+        val tombstoneMock = mockk<(RecordMeta) -> Unit>(relaxed = true)
+
+        install(KafkaConsumer) {
+            clientId = "test-client-id"
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            consume<MyRecord>(
+                name = "example-topic",
+                onTombstone = {
+                    tombstoneMock(it)
+                },
+                onRecord = {},
+            )
+        }
+
+        startApplication()
+
+        val lastRecord =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = "null".toByteArray(),
+            )
+
+        verify(timeout = 5000) {
+            tombstoneMock(
+                match { it.key == "test-key" && it.topic == "example-topic" && it.partition == 0 && it.offset >= 0L }
+            )
+        }
+
+        eventually(5.seconds) {
+            val offset = kafka.getOffset("example-topic", "test-group-id")
+            offset shouldEqual (lastRecord.offset() + 1L)
+        }
+    }
 }

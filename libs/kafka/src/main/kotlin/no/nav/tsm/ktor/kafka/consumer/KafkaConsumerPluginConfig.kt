@@ -65,7 +65,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
     ) : Unbatched<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
-            val parsed =
+            val parsed: RecordType? =
                 try {
                     objectMapper.readValue(value, jacksonRef)
                 } catch (e: Exception) {
@@ -73,7 +73,11 @@ sealed interface KafkaTopic<RecordType : Any> {
                 }
 
             try {
-                onRecord(parsed)
+                if (parsed == null) {
+                    onTombstone(meta)
+                } else {
+                    onRecord(parsed)
+                }
             } catch (e: Exception) {
                 throw KafkaHandlerException(listOf(meta), e)
             }
@@ -88,7 +92,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
     ) : Unbatched<RecordType> {
         override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
-            val parsed =
+            val parsed: RecordType? =
                 try {
                     objectMapper.readValue(value, jacksonRef)
                 } catch (e: Exception) {
@@ -96,7 +100,11 @@ sealed interface KafkaTopic<RecordType : Any> {
                 }
 
             try {
-                onRecord(parsed, meta)
+                if (parsed == null) {
+                    onTombstone(meta)
+                } else {
+                    onRecord(parsed, meta)
+                }
             } catch (e: Exception) {
                 throw KafkaHandlerException(listOf(meta), e)
             }

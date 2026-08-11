@@ -1,6 +1,7 @@
 package no.nav.tsm.ktor.kafka.producer
 
 import io.ktor.server.application.*
+import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import io.mockk.mockk
 import io.mockk.verify
@@ -50,6 +51,29 @@ class KafkaProducerPluginTest {
         startApplication()
 
         val producer = application.createProducer<VeryCool>("example-topic")
+        producer.send("test-key", VeryCool("123", true))
+
+        verify(timeout = 5000) { mock(VeryCool("123", true)) }
+    }
+
+    @Test
+    fun `generics should work when provided through ktor di`() = testApplication {
+        kafka.configureKafka(this)
+
+        val mock = mockk<(VeryCool) -> Unit>(relaxed = true)
+        application.installTestConsumer {
+            mock(it)
+        }
+
+        application.dependencies {
+            provide<KafkaRecordProducer<VeryCool>> {
+                this@testApplication.application.createProducer("example-topic")
+            }
+        }
+
+        startApplication()
+
+        val producer: KafkaRecordProducer<VeryCool> by application.dependencies
         producer.send("test-key", VeryCool("123", true))
 
         verify(timeout = 5000) { mock(VeryCool("123", true)) }
