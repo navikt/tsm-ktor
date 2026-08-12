@@ -26,6 +26,8 @@ fun Application.createConsumer(
     topics: List<KafkaTopic<*>>,
     pollDuration: Duration = 10.seconds,
     retryDuration: Duration = 60.seconds,
+    closeTimeout: Duration = 5.seconds,
+    shutdownTimeout: Duration = 5.seconds,
     jacksonModules: List<JacksonModule> = emptyList(),
 ) =
     KafkaConsumerJob.initConsumerJob(
@@ -36,6 +38,8 @@ fun Application.createConsumer(
                 groupId = groupId,
                 pollDuration = pollDuration,
                 retryDuration = retryDuration,
+                closeTimeout = closeTimeout,
+                shutdownTimeout = shutdownTimeout,
                 jacksonModules = jacksonModules.toMutableList(),
             ),
     )

@@ -14,6 +14,8 @@ class KafkaConsumerPluginConfig {
     lateinit var groupId: String
     var pollDuration: Duration = 10.seconds
     var retryDuration: Duration = 60.seconds
+    var closeTimeout: Duration = 5.seconds
+    var shutdownTimeout: Duration = 5.seconds
     val topics: MutableList<KafkaTopic<*>> = mutableListOf()
     val jacksonModules: MutableList<JacksonModule> = mutableListOf()
 

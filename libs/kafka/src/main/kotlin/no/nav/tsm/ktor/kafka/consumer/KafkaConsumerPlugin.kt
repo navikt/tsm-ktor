@@ -3,8 +3,10 @@ package no.nav.tsm.ktor.kafka.consumer
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.*
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
+import no.nav.tsm.ktor.logger
 
 /**
  * Installs a consumer and attaches to the Ktor life-cycle. The consumer can subscribe to many topics with each their
@@ -13,6 +15,7 @@ import no.nav.tsm.ktor.kafka.config.KafkaConfig
  * The consumer handles committing to the appropriate topic, partition and offset, but only if the record was parsed
  * successfully, and the handler
  */
+private val logger = logger()
 val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
     get() =
         createApplicationPlugin(name = "KafkaConsumer-${UUID.randomUUID()}", ::KafkaConsumerPluginConfig) {
@@ -24,8 +27,8 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
             } catch (_: DuplicatePluginException) {
                 // Already installed, no worries
             }
-
-            val job =
+            val consumerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            val kafkaConsumerJob =
                 KafkaConsumerJob.initConsumerJob(
                     application = application,
                     handlers = pluginConfig.topics,
@@ -34,17 +37,53 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                             groupId = pluginConfig.groupId,
                             pollDuration = pluginConfig.pollDuration,
                             retryDuration = pluginConfig.retryDuration,
+                            closeTimeout = pluginConfig.closeTimeout,
+                            shutdownTimeout = pluginConfig.shutdownTimeout,
                             jacksonModules = pluginConfig.jacksonModules.toMutableList(),
                         ),
                 )
 
-            on(MonitoringEvent(ApplicationStarted)) { application ->
-                application.launch {
-                    job.start()
+            val runningJob = AtomicReference<Job?>(null)
+            var job: Job? = null
+
+            on(MonitoringEvent(ApplicationStarted)) {
+                job = consumerScope.launch {
+                    try {
+                        kafkaConsumerJob.start()
+                    } catch (ex: CancellationException) {
+                        throw ex
+                    } catch (ex: Exception) {
+                        logger.error(
+                            "Kafka consumer for ${pluginConfig.topics.joinToString(", ")} stopped and will not " +
+                                "consume more records until the application is restarted",
+                            ex,
+                        )
+                    }
                 }
             }
 
             on(MonitoringEvent(ApplicationStopped)) {
-                job.stop()
+                if (job == null) {
+                    kafkaConsumerJob.close()
+                    consumerScope.cancel()
+                    return@on
+                }
+
+                kafkaConsumerJob.stop()
+                try {
+                    runBlocking {
+                        val stopped = withTimeoutOrNull(pluginConfig.shutdownTimeout) { job.join() }
+                        if (stopped == null) {
+                            logger.warn(
+                                "Kafka consumer did not stop within ${pluginConfig.shutdownTimeout}, cancelling it. " +
+                                    "Records being handled may be delivered again after restart."
+                            )
+                            consumerScope.cancel()
+                            withTimeoutOrNull(pluginConfig.closeTimeout) { job.join() }
+                        }
+                    }
+                } finally {
+                    consumerScope.cancel()
+                }
             }
         }
