@@ -22,7 +22,7 @@ fun Application.sykmeldingInputProducer(): SykmeldingInputProducer {
 }
 
 class SykmeldingInputProducer(private val producer: KafkaRecordProducer<SykmeldingRecord>) {
-    val info = getRuntimeInfo()
+    private val info = getRuntimeInfo()
 
     fun send(record: SykmeldingRecord) =
         producer.send(
@@ -34,6 +34,21 @@ class SykmeldingInputProducer(private val producer: KafkaRecordProducer<Sykmeldi
             ),
         )
 
+    fun send(
+        record: SykmeldingRecord,
+        sourceApp: String,
+        sourceNamespace: String,
+        additionalHeaders: Map<String, String> = emptyMap(),
+    ) =
+        producer.send(
+            record.sykmelding.id,
+            record,
+            mapOf(
+                REQUIRED_HEADER_SOURCE_APP to sourceApp,
+                REQUIRED_HEADER_SOURCE_NAMESPACE to sourceNamespace,
+            ) + additionalHeaders,
+        )
+
     fun tombstone(key: String) =
         producer.tombstone(
             key,
@@ -41,5 +56,19 @@ class SykmeldingInputProducer(private val producer: KafkaRecordProducer<Sykmeldi
                 REQUIRED_HEADER_SOURCE_APP to info.appName,
                 REQUIRED_HEADER_SOURCE_NAMESPACE to info.appNamespace,
             ),
+        )
+
+    fun tombstone(
+        key: String,
+        sourceApp: String,
+        sourceNamespace: String,
+        additionalHeaders: Map<String, String> = emptyMap(),
+    ) =
+        producer.tombstone(
+            key,
+            mapOf(
+                REQUIRED_HEADER_SOURCE_APP to sourceApp,
+                REQUIRED_HEADER_SOURCE_NAMESPACE to sourceNamespace,
+            ) + additionalHeaders,
         )
 }

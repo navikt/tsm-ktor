@@ -23,4 +23,18 @@ class SykmeldingInputProducerTest {
 
         meta.topic() shouldEqual "tsm.sykmeldinger-input"
     }
+
+    @Test
+    fun `overloads with custom headers should work`() = testApplication {
+        kafka.configureKafka(this)
+
+        application.install(KafkaProducer) {
+            clientId = "producer-tester"
+        }
+
+        val producer = application.sykmeldingInputProducer()
+        val meta = producer.tombstone("mordi", "syfosmmottak", "teamsykmelding", mapOf("bonus" to "yes"))
+
+        meta.topic() shouldEqual "tsm.sykmeldinger-input"
+    }
 }
