@@ -4,15 +4,24 @@ import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.equals.shouldEqual
 import io.ktor.server.testing.*
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyOrder
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
+import no.nav.tsm.ktor.kafka.config.KafkaConfig
+import no.nav.tsm.ktor.kafka.config.kafkaConfig
 import no.nav.tsm.ktor.kafka.test.WithKafkaContainer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.junit.jupiter.api.TestInstance
 
 private data class MyRecord(
     val sykmeldingId: String,
@@ -20,8 +29,14 @@ private data class MyRecord(
     val hasManyValues: Boolean,
 )
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-topic")) {
     val producer = createTestProducer()
+
+    @AfterTest
+    fun cleanup() {
+        resetTopics()
+    }
 
     @Test
     fun `simple config and producer tests with records and tombstone`() = testApplication {
@@ -243,6 +258,244 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
     }
 
     @Test
+    fun `a cancellation from inside onRecord is retried, no shutdown`(): Unit = runBlocking {
+        val attempts = AtomicInteger(0)
+        val retried = CompletableDeferred<Unit>()
+
+        withConsumerJob(
+            configure = {
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ ->
+                        if (attempts.incrementAndGet() == 2) retried.complete(Unit)
+                        withTimeout(1.milliseconds) { delay(1.seconds) }
+                    },
+                )
+            }
+        ) { _, running ->
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+
+            withTimeout(5.seconds) { retried.await() }
+            running.isActive shouldEqual true
+        }
+    }
+
+    @Test
+    fun `cancelling the consumer stops it and closes the consumer`(): Unit = runBlocking {
+        val consumer = spyk(testConsumer(configWithKafka().kafkaConfig("test-client")))
+        val consumed = CompletableDeferred<Unit>()
+
+        withConsumerJob(
+            consumer = consumer,
+            configure = {
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ -> consumed.complete(Unit) },
+                )
+            },
+        ) { _, running ->
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+            withTimeout(5.seconds) { consumed.await() }
+
+            running.cancel()
+
+            withTimeout(5.seconds) { running.join() }
+            running.isCancelled shouldEqual true
+            verify { consumer.close(any()) }
+        }
+    }
+
+    @Test
+    fun `cancelling while a record is being handled does not run the record retry path`(): Unit = runBlocking {
+        val consumer = spyk(testConsumer(configWithKafka().kafkaConfig("test-client")))
+        val handling = CompletableDeferred<Unit>()
+
+        withConsumerJob(
+            consumer = consumer,
+            configure = {
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ ->
+                        handling.complete(Unit)
+                        delay(30.seconds)
+                    },
+                )
+            },
+        ) { _, running ->
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+            withTimeout(5.seconds) { handling.await() }
+
+            running.cancel()
+            withTimeout(5.seconds) { running.join() }
+
+            verify(exactly = 0) { consumer.unsubscribe() }
+        }
+    }
+
+    @Test
+    fun `stop wakes up the consumer so start returns and the consumer is closed`(): Unit = runBlocking {
+        val consumer = spyk(testConsumer(configWithKafka().kafkaConfig("test-client")))
+        val consumed = CompletableDeferred<Unit>()
+
+        val record =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+
+        withConsumerJob(
+            consumer = consumer,
+            pollDuration = 60.seconds,
+            configure = {
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ -> consumed.complete(Unit) },
+                )
+            },
+        ) { job, running ->
+            withTimeout(5.seconds) { consumed.await() }
+            eventually(10.seconds) {
+                getOffset("example-topic", "test-group-id") shouldEqual (record.offset() + 1L)
+            }
+
+            job.stop()
+
+            withTimeout(5.seconds) { running.join() }
+            running.isCancelled shouldEqual false
+
+            verify { consumer.wakeup() }
+            verify { consumer.close(any()) }
+        }
+    }
+
+    @Test
+    fun `stopping the application finishes the record being handled and commits it`(): Unit = runBlocking {
+        val handling = CompletableDeferred<Unit>()
+        val handled = AtomicBoolean(false)
+
+        val app = TestApplication {
+            initKafkaConfig()
+
+            install(KafkaConsumer) {
+                clientId = "test-client-id"
+                groupId = "test-group-id"
+                pollDuration = 1.seconds
+                retryDuration = 1.seconds
+
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ ->
+                        handling.complete(Unit)
+                        delay(2.seconds)
+                        handled.set(true)
+                    },
+                )
+            }
+        }
+        app.start()
+
+        val record =
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+
+        try {
+            withTimeout(5.seconds) { handling.await() }
+        } finally {
+            app.stop()
+        }
+        handled.get() shouldEqual true
+        getOffset("example-topic", "test-group-id") shouldEqual (record.offset() + 1L)
+    }
+
+    @Test
+    fun `stopping during a retry backoff does not wait the backoff out`(): Unit = runBlocking {
+        val consumer = spyk(testConsumer(configWithKafka().kafkaConfig("test-client")))
+        val failed = CompletableDeferred<Unit>()
+
+        withConsumerJob(
+            consumer = consumer,
+            configure = {
+                retryDuration = 60.seconds
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ ->
+                        failed.complete(Unit)
+                        throw RuntimeException("Test: Failed to process record")
+                    },
+                )
+            },
+        ) { job, running ->
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+            withTimeout(5.seconds) { failed.await() }
+            delay(3.seconds)
+
+            job.stop()
+
+            withTimeout(5.seconds) { running.join() }
+            running.isCancelled shouldEqual false
+            verify { consumer.close(any()) }
+        }
+    }
+
+    @Test
+    fun `cancelling during a retry backoff shuts the consumer down and closes it`(): Unit = runBlocking {
+        val consumer = spyk(testConsumer(configWithKafka().kafkaConfig("test-client")))
+        val failed = CompletableDeferred<Unit>()
+
+        withConsumerJob(
+            consumer = consumer,
+            configure = {
+                retryDuration = 60.seconds
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ ->
+                        failed.complete(Unit)
+                        throw RuntimeException("Test: Failed to process record")
+                    },
+                )
+            },
+        ) { _, running ->
+            producer.send(
+                topic = "example-topic",
+                key = "test-key",
+                value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+            )
+            withTimeout(5.seconds) { failed.await() }
+            running.cancel()
+
+            withTimeout(5.seconds) { running.join() }
+            verify { consumer.close(any()) }
+        }
+    }
+
+    @Test
     fun `should be able to install multiple Kafka consumers`() = testApplication {
         initKafkaConfig()
 
@@ -329,6 +582,40 @@ class KafkaTest : WithKafkaContainer(topics = listOf("example-topic", "other-top
         eventually(5.seconds) {
             val offset = getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
+        }
+    }
+
+    private fun testConsumer(kafkaConfig: KafkaConfig): ByteArrayConsumer =
+        ByteArrayConsumer(
+            clientId = "test-client-id",
+            groupId = "test-group-id",
+            config = kafkaConfig,
+        )
+
+    private suspend fun withConsumerJob(
+        kafkaConfig: KafkaConfig = configWithKafka().kafkaConfig("test-consumer"),
+        consumer: ByteArrayConsumer = testConsumer(kafkaConfig),
+        pollDuration: Duration = 1.seconds,
+        configure: KafkaConsumerPluginConfig.() -> Unit,
+        block: suspend (job: KafkaConsumerJob, running: Job) -> Unit,
+    ) = coroutineScope {
+        val pluginConfig =
+            KafkaConsumerPluginConfig().apply {
+                clientId = "test-client-id"
+                groupId = "test-group-id"
+                this.pollDuration = pollDuration
+                retryDuration = 10.milliseconds
+                configure()
+            }
+
+        val job = KafkaConsumerJob(pluginConfig.topics.map { it.topic }, consumer, pluginConfig)
+        val running = launch { job.start() }
+
+        try {
+            block(job, running)
+        } finally {
+            job.stop()
+            withTimeoutOrNull(5.seconds) { running.join() } ?: running.cancel()
         }
     }
 }

@@ -2,88 +2,137 @@ package no.nav.tsm.ktor.kafka.consumer
 
 import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import no.nav.tsm.ktor.kafka.config.kafkaObjectMapper
 import no.nav.tsm.ktor.logger
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.common.errors.WakeupException
 
 /** Startable and stoppable consumer with manual committing and retry-mechanisms. */
 internal class KafkaConsumerJob(
-    val topics: List<String>,
-    val consumer: ByteArrayConsumer,
-    val pluginConfig: KafkaConsumerPluginConfig,
+    private val topics: List<String>,
+    private val consumer: ByteArrayConsumer,
+    private val pluginConfig: KafkaConsumerPluginConfig,
 ) {
-    val logger = logger()
-    val objectMapper =
+    private val logger = logger()
+    private val objectMapper =
         kafkaObjectMapper().apply {
             pluginConfig.jacksonModules.forEach { registerModule(it) }
         }
 
+    private val stopped = CompletableDeferred<Boolean>()
+
+    private val stopping: Boolean
+        get() = stopped.isCompleted
+
     suspend fun start() =
         withContext(Dispatchers.IO) {
-            while (isActive) {
-                logger.debug("Subscribing to topics: ${topics.joinToString(", ")}")
-                consumer.subscribe(topics)
-                try {
-                    while (isActive) {
-                        val records = consumer.poll(pluginConfig.pollDuration.toJavaDuration())
-                        if (records.isEmpty) {
-                            logger.debug("Got no records after ${pluginConfig.pollDuration}, continuing to poll")
-                            continue
-                        }
-
-                        for (record in records) {
-                            val topic = record.topic()
-                            val handler = pluginConfig.topics.find { it.topic == topic }
-                            requireNotNull(handler) {
-                                "Topic $topic was subscribed, but found no configuration with onRecord for it."
-                            }
-
-                            val meta = record.toRecordMeta()
-                            val value = record.value()
-                            if (value == null) {
-                                logger.debug("Received tombstone for key ${record.key()} on topic $topic")
-                                handler.onTombstone(meta)
-                                consumer.commitSync(topic, record)
+            try {
+                while (isActive && !stopping) {
+                    try {
+                        logger.debug("Subscribing to topics: ${topics.joinToString(", ")}")
+                        consumer.subscribe(topics)
+                        while (isActive) {
+                            val records = consumer.poll(pluginConfig.pollDuration.toJavaDuration())
+                            if (records.isEmpty) {
+                                logger.debug("Got no records after ${pluginConfig.pollDuration}, continuing to poll")
                                 continue
                             }
 
-                            handler.handleRecord(value, meta, objectMapper)
-                            /* If handleRecord fails, sync is skipped and error propagates to  KafkaHandlerException */
-                            consumer.commitSync(topic, record)
+                            for (record in records) {
+                                val topic = record.topic()
+                                val handler = pluginConfig.topics.find { it.topic == topic }
+                                requireNotNull(handler) {
+                                    "Topic $topic was subscribed, but found no configuration with onRecord for it."
+                                }
+
+                                val meta = record.toRecordMeta()
+                                val value = record.value()
+                                if (value == null) {
+                                    logger.debug("Received tombstone for key ${record.key()} on topic $topic")
+                                    handler.onTombstone(meta)
+                                    commitSync(topic, record)
+                                    continue
+                                }
+
+                                handler.handleRecord(value, meta, objectMapper)
+                                /* If handleRecord fails, sync is skipped and error propagates to  KafkaHandlerException */
+                                commitSync(topic, record)
+                            }
                         }
+                    } catch (ex: WakeupException) {
+                        throw ex
+                    } catch (ex: CancellationException) {
+                        logger.debug("Kafka consumer coroutine cancelled, shutting down", ex)
+                        throw ex
+                    } catch (ex: KafkaParseException) {
+                        unsubscribeAndRetry("Parsing of record (${ex.meta.description()}) failed", ex)
+                    } catch (ex: KafkaHandlerException) {
+                        unsubscribeAndRetry("Handling of record (${ex.meta.description()}) failed", ex)
+                    } catch (ex: Exception) {
+                        unsubscribeAndRetry("Unknown error running Kafka consumer", ex)
                     }
-                } catch (ex: CancellationException) {
-                    logger.debug("Kafka consumer cancelled gracefully (application stopping)", ex)
-                } catch (ex: KafkaParseException) {
-                    unsubscribeAndRetry(
-                        "Parsing of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
-                        ex,
-                    )
-                } catch (ex: KafkaHandlerException) {
-                    unsubscribeAndRetry(
-                        "Handling of record (${ex.meta.description()}) failed, retrying after ${pluginConfig.retryDuration}",
-                        ex,
-                    )
-                } catch (ex: Exception) {
-                    unsubscribeAndRetry(
-                        "Unknown error running Kafka consumer, waiting ${pluginConfig.retryDuration} to retry",
-                        ex,
-                    )
                 }
+            } catch (ex: WakeupException) {
+                logger.info("Kafka consumer woken up, shutting down")
+            } finally {
+                logger.info("Kafka consumer shutting down")
+                close()
             }
         }
 
-    fun stop() {
-        logger.debug("Stopping Kafka consumer")
-        consumer.unsubscribe()
+    private fun commitSync(topic: String, record: ConsumerRecord<String, ByteArray?>) {
+        try {
+            consumer.commitSync(topic, record)
+        } catch (ex: WakeupException) {
+            logger.info("Shutdown interrupted the commit of $topic-${record.partition()}, committing before stopping")
+            try {
+                consumer.commitSync(topic, record, pluginConfig.closeTimeout.toJavaDuration())
+            } catch (e: Exception) {
+                logger.error(
+                    "Failed to commit offset ${record.offset() + 1} for $topic-${record.partition()} while shutting down",
+                    e,
+                )
+            }
+            throw ex
+        }
     }
 
-    private suspend fun unsubscribeAndRetry(message: String, cause: Throwable) {
-        logger.error(message, cause)
-        consumer.unsubscribe()
-        delay(pluginConfig.retryDuration)
+    private suspend fun unsubscribeAndRetry(failure: String, cause: Throwable) {
+        if (stopping) {
+            logger.error("$failure. The consumer is stopping, so it is handled again after restart", cause)
+            return
+        } else {
+            logger.error("$failure, retrying after ${pluginConfig.retryDuration}", cause)
+        }
+
+        try {
+            consumer.unsubscribe()
+        } catch (ex: WakeupException) {
+            throw ex
+        } catch (ex: Exception) {
+            logger.warn("Failed to unsubscribe before retrying, continuing anyway", ex)
+        }
+
+        withTimeoutOrNull(pluginConfig.retryDuration) { stopped.await() }
+    }
+
+    fun stop() {
+        logger.info("Stopping Kafka consumer")
+        stopped.complete(true)
+        consumer.wakeup()
+    }
+
+    fun close() {
+        try {
+            logger.debug("Closing Kafka consumer")
+            consumer.close(pluginConfig.closeTimeout.toJavaDuration())
+        } catch (ex: Exception) {
+            logger.warn("Error while closing Kafka consumer", ex)
+        }
     }
 }

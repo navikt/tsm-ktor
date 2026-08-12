@@ -2,12 +2,14 @@ package no.nav.tsm.ktor.kafka.consumer
 
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
-import io.ktor.server.plugins.di.dependencies
+import io.ktor.server.plugins.di.*
 import java.util.*
 import kotlinx.coroutines.*
 import no.nav.tsm.ktor.kafka.config.KafkaBase
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
-import no.nav.tsm.ktor.kafka.config.kafkaConfig
+import no.nav.tsm.ktor.logger
+
+private val logger = logger()
 
 /**
  * Installs a consumer and attaches to the Ktor life-cycle. The consumer can subscribe to many topics with each their
@@ -27,7 +29,7 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
             } catch (_: DuplicatePluginException) {
                 // Already installed, no worries
             }
-
+            val consumerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
             val kafkaConfig: KafkaConfig by application.dependencies
             val configuredTopics: List<String> = pluginConfig.topics.map { it.topic }
             val byteArrayConsumer =
@@ -36,15 +38,45 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                     pluginConfig.groupId,
                     kafkaConfig,
                 )
-            val job = KafkaConsumerJob(configuredTopics, byteArrayConsumer, pluginConfig)
-
-            on(MonitoringEvent(ApplicationStarted)) { application ->
-                application.launch {
-                    job.start()
+            val kafkaConsumerJob = KafkaConsumerJob(configuredTopics, byteArrayConsumer, pluginConfig)
+            var job: Job? = null
+            on(MonitoringEvent(ApplicationStarted)) {
+                job = consumerScope.launch {
+                    try {
+                        kafkaConsumerJob.start()
+                    } catch (ex: CancellationException) {
+                        throw ex
+                    } catch (ex: Exception) {
+                        logger.error(
+                            "Kafka consumer for ${configuredTopics.joinToString(", ")} stopped and will not " +
+                                "consume more records until the application is restarted",
+                            ex,
+                        )
+                    }
                 }
             }
+            on(MonitoringEvent(ApplicationStopping)) {
+                if (job == null) {
+                    kafkaConsumerJob.close()
+                    consumerScope.cancel()
+                    return@on
+                }
 
-            on(MonitoringEvent(ApplicationStopped)) {
-                job.stop()
+                kafkaConsumerJob.stop()
+                try {
+                    runBlocking {
+                        val stopped = withTimeoutOrNull(pluginConfig.shutdownTimeout) { job.join() }
+                        if (stopped == null) {
+                            logger.warn(
+                                "Kafka consumer did not stop within ${pluginConfig.shutdownTimeout}, cancelling it. " +
+                                    "Records being handled may be delivered again after restart."
+                            )
+                            consumerScope.cancel()
+                            withTimeoutOrNull(pluginConfig.closeTimeout) { job.join() }
+                        }
+                    }
+                } finally {
+                    consumerScope.cancel()
+                }
             }
         }

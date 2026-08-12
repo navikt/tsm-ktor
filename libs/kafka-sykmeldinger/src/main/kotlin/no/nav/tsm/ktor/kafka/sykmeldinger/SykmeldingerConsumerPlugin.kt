@@ -17,6 +17,8 @@ val SykmeldingerConsumer =
             groupId = pluginConfig.groupId
             retryDuration = pluginConfig.retryDuration
             pollDuration = pluginConfig.pollDuration
+            shutdownTimeout = pluginConfig.shutdownTimeout
+            closeTimeout = pluginConfig.closeTimeout
             jacksonModule(SykmeldingModule())
             consume<SykmeldingRecord>(
                 name = "tsm.sykmeldinger",

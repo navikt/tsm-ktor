@@ -6,6 +6,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import no.nav.tsm.ktor.logger
+
+private val logger = logger()
 
 class KafkaConsumerPluginConfig {
     /** Used internally in kafka for tracing and logging, set it to the pod name. */
@@ -14,6 +20,8 @@ class KafkaConsumerPluginConfig {
     lateinit var groupId: String
     var pollDuration: Duration = 10.seconds
     var retryDuration: Duration = 60.seconds
+    var shutdownTimeout: Duration = 5.seconds
+    var closeTimeout: Duration = 5.seconds
     val topics: MutableList<KafkaTopic<*>> = mutableListOf()
     val jacksonModules: MutableList<Module> = mutableListOf()
 
@@ -72,6 +80,9 @@ sealed interface KafkaTopic<RecordType : Any> {
 
             try {
                 onRecord(parsed)
+            } catch (e: CancellationException) {
+                currentCoroutineContext().ensureActive()
+                throw KafkaHandlerException(meta, e)
             } catch (e: Exception) {
                 throw KafkaHandlerException(meta, e)
             }

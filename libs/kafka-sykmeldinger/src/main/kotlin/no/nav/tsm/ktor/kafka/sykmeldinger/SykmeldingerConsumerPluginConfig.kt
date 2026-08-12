@@ -12,4 +12,7 @@ class SykmeldingConsumerPluginConfig {
 
     var pollDuration: Duration = 10.seconds
     var retryDuration: Duration = 60.seconds
+
+    var shutdownTimeout: Duration = 5.seconds
+    var closeTimeout: Duration = 5.seconds
 }

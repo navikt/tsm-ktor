@@ -14,11 +14,16 @@ import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.testcontainers.kafka.ConfluentKafkaContainer
 
-open class WithKafkaContainer(topics: List<String>) {
+open class WithKafkaContainer(val topics: List<String>) {
     private val kafka: ConfluentKafkaContainer = ConfluentKafkaContainer("confluentinc/cp-kafka:8.1.0")
 
     init {
         kafka.start()
+        createTopics(topics)
+    }
+
+    fun resetTopics() {
+        createAdmin().deleteTopics(topics).all().get()
         createTopics(topics)
     }
 
@@ -31,18 +36,21 @@ open class WithKafkaContainer(topics: List<String>) {
     }
 
     fun TestApplicationBuilder.initKafkaConfig() {
+        environment {
+            config = configWithKafka()
+        }
+    }
+
+    fun configWithKafka(): HoconApplicationConfig {
         val hocon =
             """
-            |kafka.config {
-            |  "bootstrap.servers" = "${kafka.bootstrapServers}"
-            |  "security.protocol" = "PLAINTEXT"
-            |}
-            """
+                |kafka.config {
+                |  "bootstrap.servers" = "${kafka.bootstrapServers}"
+                |  "security.protocol" = "PLAINTEXT"
+                |}
+                """
                 .trimMargin()
-
-        environment {
-            config = HoconApplicationConfig(ConfigFactory.parseString(hocon))
-        }
+        return HoconApplicationConfig(ConfigFactory.parseString(hocon))
     }
 
     fun getOffset(topic: String, groupId: String): Long {
