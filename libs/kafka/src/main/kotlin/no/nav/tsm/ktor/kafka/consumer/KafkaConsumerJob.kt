@@ -177,7 +177,7 @@ private constructor(
         } catch (ex: WakeupException) {
             logger.info("Shutdown interrupted the commit of $nextOffsets, committing before stopping")
             try {
-                consumer.commitSync(nextOffsets)
+                consumer.commitSync(nextOffsets, jobConfig.closeTimeout.toJavaDuration())
             } catch (e: Exception) {
                 logger.error(
                     "Failed to commit offsets $nextOffsets while shutting down",
