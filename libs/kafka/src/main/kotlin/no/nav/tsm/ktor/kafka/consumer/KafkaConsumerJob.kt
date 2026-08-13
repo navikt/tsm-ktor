@@ -7,6 +7,8 @@ import kotlin.time.toJavaDuration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -136,6 +138,8 @@ private constructor(
                 /* If handleRecord fails, sync is skipped and error propagates to  KafkaHandlerException */
                 commitSync(record.nextOffsets())
             } catch (ex: Exception) {
+                currentCoroutineContext().ensureActive()
+
                 if (handler.shouldSkip?.invoke(meta) == true) {
                     logger.info(
                         "Record ${meta.key} on topic ${meta.topic} failed with exception, but shouldSkip returned true, skipping",
@@ -200,6 +204,8 @@ private constructor(
     }
 
     private suspend fun unsubscribeAndRetry(message: String, cause: Throwable) {
+        currentCoroutineContext().ensureActive()
+
         if (stopping) {
             logger.error("$message. The consumer is stopping, so it is handled again after restart", cause)
             return
