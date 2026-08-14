@@ -15,6 +15,12 @@ if [ ! -s libs/version ]; then
 fi
 
 NEW_VERSION=$(cat libs/version)
+
+if ! echo "$NEW_VERSION" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+$"; then
+  echo "libs/version contains '$NEW_VERSION', expected a version like 1.2.3" >&2
+  exit 1
+fi
+
 NEW_TAG="v${NEW_VERSION}"
 
 if git rev-parse -q --verify "refs/tags/$NEW_TAG" >/dev/null; then
