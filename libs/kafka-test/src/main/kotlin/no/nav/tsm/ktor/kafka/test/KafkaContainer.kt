@@ -57,6 +57,12 @@ class KafkaContainer(createTopics: List<String>, image: String = "confluentinc/c
         return offsets[partition]?.offset() ?: throw IllegalStateException("Found no offset for topic \"$topic\"")
     }
 
+    fun getGroupMembers(groupId: String): Int {
+        val admin = createAdmin()
+        val group = admin.describeConsumerGroups(listOf(groupId)).all().get()[groupId]
+        return group?.members()?.size ?: 0
+    }
+
     fun forceOffset(topic: String, groupId: String, offset: Long) {
         val admin = createAdmin()
         val partition = TopicPartition(topic, 0)

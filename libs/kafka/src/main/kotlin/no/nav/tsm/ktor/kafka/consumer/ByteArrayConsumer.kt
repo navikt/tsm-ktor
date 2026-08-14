@@ -3,11 +3,7 @@ package no.nav.tsm.ktor.kafka.consumer
 import java.time.Duration
 import no.nav.tsm.ktor.kafka.config.InternalKafkaConfig
 import no.nav.tsm.ktor.logger
-import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.consumer.ConsumerRecords
-import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.clients.consumer.OffsetAndMetadata
+import org.apache.kafka.clients.consumer.*
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -38,12 +34,20 @@ internal class ByteArrayConsumer(
 
     fun poll(timeout: Duration): ConsumerRecords<String, ByteArray?> = consumer.poll(timeout)
 
-    fun commitSync(topic: String, record: ConsumerRecord<String, ByteArray?>) {
-        logger.debug("Committing offset ${record.offset() + 1} for topic $topic, partition ${record.partition()}")
-        this.commitSync(topic, record.partition(), record.offset() + 1)
+    fun commitSync(nextOffsets: Map<TopicPartition, OffsetAndMetadata>, timeout: Duration? = null) {
+        logger.debug("Committing offsets $nextOffsets")
+        if (timeout == null) {
+            consumer.commitSync(nextOffsets)
+        } else {
+            consumer.commitSync(nextOffsets, timeout)
+        }
     }
 
-    private fun commitSync(topic: String, partition: Int, offset: Long) {
-        consumer.commitSync(mapOf(TopicPartition(topic, partition) to OffsetAndMetadata(offset)))
+    fun wakeup() {
+        consumer.wakeup()
+    }
+
+    fun close(timeout: Duration) {
+        consumer.close(CloseOptions.timeout(timeout))
     }
 }

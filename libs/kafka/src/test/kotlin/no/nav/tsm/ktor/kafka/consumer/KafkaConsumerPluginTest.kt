@@ -6,13 +6,15 @@ import io.ktor.server.testing.*
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import no.nav.tsm.ktor.kafka.test.KafkaContainer
 import no.nav.tsm.ktor.kafka.test.send
 import no.nav.tsm.ktor.kafka.test.yeet
 import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.RecordMetadata
 
 private data class MyRecord(
     val sykmeldingId: String,
@@ -533,5 +535,48 @@ class KafkaTest {
             val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
         }
+    }
+
+    @Test
+    fun `stopping the application finishes the record being handled and commits it`() {
+        val handling = CompletableDeferred<Unit>()
+        val handled = AtomicBoolean(false)
+        lateinit var record: RecordMetadata
+
+        testApplication {
+            kafka.configureKafka(this)
+
+            install(KafkaConsumer) {
+                clientId = "test-client-id"
+                groupId = "test-group-id"
+                pollDuration = 1.seconds
+                retryDuration = 1.seconds
+
+                consume<MyRecord>(
+                    name = "example-topic",
+                    onTombstone = {},
+                    onRecord = { _ ->
+                        handling.complete(Unit)
+                        delay(2.seconds)
+                        handled.set(true)
+                    },
+                )
+            }
+
+            startApplication()
+
+            record =
+                producer.send(
+                    topic = "example-topic",
+                    key = "test-key",
+                    value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
+                )
+
+            withTimeout(5.seconds) { handling.await() }
+            // testApplication stops the application here, mid-handling
+        }
+
+        handled.get() shouldEqual true
+        kafka.getOffset("example-topic", "test-group-id") shouldEqual (record.offset() + 1L)
     }
 }
