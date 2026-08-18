@@ -26,6 +26,7 @@ dependencies {
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.serialization.jackson3)
 
+    testImplementation(libs.mockk)
     testImplementation(ktorLibs.server.testHost)
     testImplementation(ktorLibs.client.mock)
     testImplementation(libs.kotlin.test.junit5)
