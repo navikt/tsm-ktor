@@ -29,10 +29,7 @@ class PdlCloudClient(
             exponentialDelay()
         }
         install(ContentNegotiation) {
-            jackson {
-                // tsm-pdl-cache responds with some values we don't care about
-                configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            }
+            jackson {}
         }
     }
 
