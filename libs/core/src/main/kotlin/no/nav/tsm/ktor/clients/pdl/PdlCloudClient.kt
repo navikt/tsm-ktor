@@ -60,5 +60,11 @@ class PdlCloudClient(
         }
     }
 
+    override suspend fun getAktorId(ident: String): String? {
+        val response = getPerson(ident) ?: return null
+
+        return response.identer.firstOrNull { it.gruppe == PdlIdentgruppe.AKTORID && !it.historisk }?.ident
+    }
+
     private suspend fun getToken() = texasClient.entraIdToken("tsm", "tsm-pdl-cache")
 }

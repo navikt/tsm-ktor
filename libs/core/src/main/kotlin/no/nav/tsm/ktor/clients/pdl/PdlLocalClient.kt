@@ -26,4 +26,9 @@ class PdlLocalClient : PdlClient {
                 ),
         )
     }
+
+    override suspend fun getAktorId(fnr: String): String? {
+        logger.info("[PDL Mock]: Got request for fnr $fnr, returning mock aktorId (123456789)")
+        return "123456789"
+    }
 }

@@ -41,7 +41,12 @@ class PdlCloudClientTest {
                             ident = "12345678910",
                             gruppe = PdlIdentgruppe.FOLKEREGISTERIDENT,
                             historisk = false,
-                        )
+                        ),
+                        PdlIdent(
+                            ident = "test-aktor-id",
+                            gruppe = PdlIdentgruppe.AKTORID,
+                            historisk = false,
+                        ),
                     ),
             )
         )
@@ -75,6 +80,30 @@ class PdlCloudClientTest {
         val response = pdlClient.getPerson("hello")
 
         response?.foedselsdato shouldBe LocalDate.now().minusYears(35)
+    }
+
+    @Test
+    fun `should be able to get aktorId`() = testApplication {
+        val mockEngine = MockEngine { request ->
+            assertEquals("/api/person", request.url.fullPath)
+            request.headers["Authorization"] shouldBe "Bearer test-token"
+
+            respond(
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                content = ByteReadChannel(goodResponseBodyJson),
+            )
+        }
+
+        val pdlClient =
+            PdlCloudClient(
+                httpClient = HttpClient(mockEngine) {},
+                texasClient = texasMock,
+            )
+
+        val response = pdlClient.getAktorId("hello")
+
+        response shouldBe "test-aktor-id"
     }
 
     @Test
