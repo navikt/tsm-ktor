@@ -1,7 +1,7 @@
 package no.nav.tsm.ktor.clients.pdl
 
-import no.nav.tsm.ktor.logger
 import java.time.LocalDate
+import no.nav.tsm.ktor.logger
 
 class PdlLocalClient : PdlClient {
     private val logger = logger()

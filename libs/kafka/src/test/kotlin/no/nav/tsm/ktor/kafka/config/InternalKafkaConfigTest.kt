@@ -47,6 +47,35 @@ class InternalKafkaConfigTest {
     }
 
     @Test
+    fun `should auto load from env when config file is present but no kafka key`() = testApplication {
+        environment {
+            config =
+                HoconApplicationConfig(
+                    ConfigFactory.parseMap(
+                            mapOf(
+                                // Nais injected values
+                                "KAFKA_BROKERS" to "kafka-1:9092,kafka-2:9092",
+                                "KAFKA_TRUSTSTORE_PATH" to "/var/run/secrets/kafka/truststore.jks",
+                                "KAFKA_CREDSTORE_PASSWORD" to "credstore-password",
+                                "KAFKA_KEYSTORE_PATH" to "/var/run/secrets/kafka/keystore.p12",
+                            )
+                        )
+                        .withFallback(ConfigFactory.parseResources("application-kafka-test-empty.conf"))
+                        .resolve()
+                )
+        }
+
+        application {
+            val config = kafkaConfig("test-client-id")
+            config.shouldBeTypeOf<InternalKafkaConfig.Local>()
+
+            val kafkaConfig = config.toProperties()
+            kafkaConfig.shouldNotBeNull()
+            kafkaConfig["bootstrap.servers"] shouldEqual "localhost:9092"
+        }
+    }
+
+    @Test
     fun `should auto load kafka config when no conf-file configuration`() = testApplication {
         application {
             val config = kafkaConfig("test-client-id")

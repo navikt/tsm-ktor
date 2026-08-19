@@ -1,7 +1,7 @@
 package no.nav.tsm.ktor.clients.pdl
 
-import no.nav.tsm.ktor.core.Navn
 import java.time.LocalDate
+import no.nav.tsm.ktor.core.Navn
 
 data class PdlPerson(val navn: PdlNavn?, val foedselsdato: LocalDate?, val identer: List<PdlIdent>)
 

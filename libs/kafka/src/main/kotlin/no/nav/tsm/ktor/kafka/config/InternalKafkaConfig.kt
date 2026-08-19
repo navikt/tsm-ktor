@@ -3,6 +3,7 @@ package no.nav.tsm.ktor.kafka.config
 import com.typesafe.config.ConfigException
 import io.ktor.server.application.Application
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.config.ApplicationConfigurationException
 import java.util.Properties
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.ktor.nais.RuntimeCluster
@@ -55,6 +56,8 @@ internal fun ApplicationConfig.kafkaConfig(clientId: String): InternalKafkaConfi
         if (confConfig.isNotEmpty()) {
             return InternalKafkaConfig.Raw(clientId, confConfig)
         }
+    } catch (_: ApplicationConfigurationException) {
+        return autoConfig(clientId)
     } catch (_: ConfigException.Missing) {
         return autoConfig(clientId)
     }
