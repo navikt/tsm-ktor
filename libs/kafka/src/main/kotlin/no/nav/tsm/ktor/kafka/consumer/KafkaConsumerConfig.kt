@@ -18,8 +18,8 @@ inline fun <reified RecordType : Any> onRecord(
 
 inline fun <reified RecordType : Any> onRecord(
     name: String,
-    noinline onRecord: (RecordType, RecordMeta) -> Unit,
-    noinline onTombstone: (RecordMeta) -> Unit,
+    noinline onRecord: suspend (RecordType, RecordMeta) -> Unit,
+    noinline onTombstone: suspend (RecordMeta) -> Unit,
     noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
 ) =
     KafkaTopic.WithMeta(

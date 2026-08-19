@@ -21,8 +21,8 @@ val SykmeldingerConsumer =
             jacksonModule(SykmeldingModule())
             consume<SykmeldingRecord>(
                 name = "tsm.sykmeldinger",
+                onRecord = { record, meta -> pluginConfig.onRecord(record, meta) },
                 onTombstone = { pluginConfig.onTombstone(it) },
-                onRecord = { pluginConfig.onRecord(it) },
             )
         }
     }

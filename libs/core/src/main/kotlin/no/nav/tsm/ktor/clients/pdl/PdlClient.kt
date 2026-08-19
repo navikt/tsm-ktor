@@ -5,5 +5,5 @@ sealed interface PdlClient {
 
     suspend fun getPerson(ident: String): PdlPerson?
 
-    suspend fun getAktorId(fnr: String): String?
+    suspend fun getAktorId(ident: String): String?
 }

@@ -34,8 +34,8 @@ class KafkaConsumerPluginConfig {
 
     inline fun <reified RecordType : Any> consume(
         name: String,
-        noinline onRecord: (RecordType, RecordMeta) -> Unit,
-        noinline onTombstone: (RecordMeta) -> Unit,
+        noinline onRecord: suspend (RecordType, RecordMeta) -> Unit,
+        noinline onTombstone: suspend (RecordMeta) -> Unit,
         noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
     ) {
         topics += onRecord(name, onRecord, onTombstone, shouldSkip)
