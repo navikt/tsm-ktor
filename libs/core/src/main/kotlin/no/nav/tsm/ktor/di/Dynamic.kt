@@ -1,8 +1,7 @@
 package no.nav.tsm.ktor.di
 
-import io.ktor.server.application.Application
-import io.ktor.server.plugins.di.DependencyRegistry
-import io.ktor.server.plugins.di.dependencies
+import io.ktor.server.application.*
+import io.ktor.server.plugins.di.*
 import no.nav.tsm.ktor.nais.RuntimeCluster
 import no.nav.tsm.ktor.nais.getRuntimeCluster
 

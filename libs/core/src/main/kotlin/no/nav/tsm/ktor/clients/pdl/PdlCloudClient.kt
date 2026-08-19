@@ -1,20 +1,17 @@
 package no.nav.tsm.ktor.clients.pdl
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.headers
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.isSuccess
-import io.ktor.serialization.jackson3.jackson
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.jackson3.*
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import no.nav.tsm.ktor.auth.texas.Texas
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.ktor.otel.failSpan
-import tools.jackson.databind.DeserializationFeature
 
 class PdlCloudClient(
     httpClient: HttpClient,

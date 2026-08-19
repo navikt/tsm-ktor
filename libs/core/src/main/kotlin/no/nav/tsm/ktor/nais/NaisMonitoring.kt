@@ -3,13 +3,12 @@ package no.nav.tsm.ktor.nais
 import dev.hayden.Check
 import dev.hayden.CheckBuilder
 import dev.hayden.KHealth
-import io.ktor.http.HttpHeaders
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.ShutDownUrl.Companion.ApplicationCallPlugin
 import io.ktor.server.metrics.micrometer.*
-import io.ktor.server.plugins.callid.CallId
-import io.ktor.server.plugins.callid.callIdMdc
-import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.plugins.callid.*
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.micrometer.prometheusmetrics.PrometheusConfig

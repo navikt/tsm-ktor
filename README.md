@@ -70,6 +70,25 @@ val (token) = texasClient.maskinporten("nhn:hpr/basic")
 logger.error("Body parsing failed", e.failSpan())
 ```
 
+**PDL client** — looks up a person in `tsm-pdl-cache`. The plugin registers a `PdlClient` in the dependency graph: `PdlCloudClient` in the cloud, `PdlLocalClient` (mock data, `does-not-exist` returns null) locally. Requires an `HttpClient` and the Texas client.
+
+```kotlin
+install(PdlPlugin)
+
+val person: PdlPerson? = pdlClient.getPerson(ident)
+```
+
+`getPerson` returns `null` when the person is unknown (404), and throws `PdlClient.UnknownError` on other failures. Server errors are retried five times with exponential backoff.
+
+Requires access to `tsm-pdl-cache` in `nais.yaml`:
+
+```yaml
+accessPolicy:
+  outbound:
+    rules:
+      - application: tsm-pdl-cache
+```
+
 **NAIS monitoring** — installs Prometheus metrics on `/internal/metrics`, liveness on `/internal/health/alive`, readiness on `/internal/health/ready`, shutdown on `/internal/shutdown`, plus call logging with a call-id from `Traceparent` or `X-Request-Id`.
 
 ```kotlin
