@@ -79,7 +79,9 @@ private constructor(
                         while (isActive) {
                             val polled = consumer.poll(jobConfig.pollDuration.toJavaDuration())
                             if (polled.isEmpty) {
-                                logger.debug("Got no records after ${jobConfig.pollDuration}, continuing to poll")
+                                logger.debug(
+                                    "Got no records in topics ${topics.joinToString(", ")} after ${jobConfig.pollDuration}, continuing to poll"
+                                )
                                 continue
                             }
 
