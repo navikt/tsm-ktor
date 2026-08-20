@@ -23,7 +23,6 @@ private data class MyRecord(
     val hasManyValues: Boolean,
 )
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KafkaTest {
     val kafka = KafkaContainer(createTopics = listOf("example-topic", "other-topic"))
     val producer: KafkaProducer<String, ByteArray> = kafka.createAnythingProducer()
