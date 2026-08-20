@@ -40,7 +40,11 @@ private constructor(
 
     init {
         class MessageSerializer : Serializer<Payload> {
-            override fun serialize(topic: String, record: Payload): ByteArray? = objectMapper.writeValueAsBytes(record)
+            override fun serialize(topic: String, record: Payload): ByteArray? =
+                when (record) {
+                    null -> null
+                    else -> objectMapper.writeValueAsBytes(record)
+                }
         }
 
         val kafkaProperties = config.toProperties()

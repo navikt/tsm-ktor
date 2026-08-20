@@ -3,7 +3,6 @@ package no.nav.tsm.ktor.kafka.consumer
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
 import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.*
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
 import no.nav.tsm.ktor.logger
@@ -43,7 +42,6 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                         ),
                 )
 
-            val runningJob = AtomicReference<Job?>(null)
             var job: Job? = null
 
             on(MonitoringEvent(ApplicationStarted)) {

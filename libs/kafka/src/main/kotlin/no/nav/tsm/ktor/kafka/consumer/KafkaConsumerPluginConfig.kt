@@ -56,7 +56,7 @@ sealed interface KafkaTopic<RecordType : Any> {
         val onTombstone: suspend (RecordMeta) -> Unit
         val shouldSkip: (suspend (RecordMeta) -> Boolean)?
 
-        suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper)
+        suspend fun handleRecord(value: ByteArray?, meta: RecordMeta, objectMapper: ObjectMapper)
     }
 
     class Record<RecordType : Any>(
@@ -66,10 +66,10 @@ sealed interface KafkaTopic<RecordType : Any> {
         val jacksonRef: TypeReference<RecordType>,
         override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
     ) : Unbatched<RecordType> {
-        override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
+        override suspend fun handleRecord(value: ByteArray?, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed: RecordType? =
                 try {
-                    objectMapper.readValue(value, jacksonRef)
+                    value?.let { objectMapper.readValue(value, jacksonRef) }
                 } catch (e: Exception) {
                     throw KafkaParseException(meta, e)
                 }
@@ -93,10 +93,10 @@ sealed interface KafkaTopic<RecordType : Any> {
         val jacksonRef: TypeReference<RecordType>,
         override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
     ) : Unbatched<RecordType> {
-        override suspend fun handleRecord(value: ByteArray, meta: RecordMeta, objectMapper: ObjectMapper) {
+        override suspend fun handleRecord(value: ByteArray?, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed: RecordType? =
                 try {
-                    objectMapper.readValue(value, jacksonRef)
+                    value?.let { objectMapper.readValue(value, jacksonRef) }
                 } catch (e: Exception) {
                     throw KafkaParseException(meta, e)
                 }

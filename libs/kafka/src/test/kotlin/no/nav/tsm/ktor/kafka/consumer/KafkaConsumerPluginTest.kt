@@ -15,6 +15,7 @@ import no.nav.tsm.ktor.kafka.test.send
 import no.nav.tsm.ktor.kafka.test.yeet
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.junit.jupiter.api.TestInstance
 
 private data class MyRecord(
     val sykmeldingId: String,
@@ -22,6 +23,7 @@ private data class MyRecord(
     val hasManyValues: Boolean,
 )
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KafkaTest {
     val kafka = KafkaContainer(createTopics = listOf("example-topic", "other-topic"))
     val producer: KafkaProducer<String, ByteArray> = kafka.createAnythingProducer()
