@@ -5,6 +5,11 @@ import io.ktor.server.plugins.di.*
 import io.ktor.server.testing.*
 import io.mockk.mockk
 import io.mockk.verify
+import kotlin.test.Test
+import kotlin.test.assertNotNull
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 import kotlinx.coroutines.*
 import no.nav.tsm.ktor.kafka.config.KafkaConfig
 import no.nav.tsm.ktor.kafka.config.kafkaConfig
@@ -14,11 +19,6 @@ import no.nav.tsm.ktor.kafka.consumer.RecordMeta
 import no.nav.tsm.ktor.kafka.consumer.toRecordMeta
 import no.nav.tsm.ktor.kafka.test.KafkaContainer
 import org.junit.jupiter.api.Assertions.assertNull
-import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 
 private data class VeryCool(
     val sykmeldingId: String,
