@@ -8,6 +8,7 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
+import org.apache.kafka.common.header.Headers
 import org.apache.kafka.common.serialization.Serializer
 import org.apache.kafka.common.serialization.StringSerializer
 import tools.jackson.databind.JacksonModule
@@ -68,11 +69,31 @@ private constructor(
         return producer.send(record).get()
     }
 
+    fun send(key: String, value: Payload, headers: Headers): RecordMetadata {
+        val record = ProducerRecord(topic, key, value)
+
+        record.headers().apply {
+            headers.forEach { add(it) }
+        }
+
+        return producer.send(record).get()
+    }
+
     fun tombstone(key: String, headers: Map<String, String> = emptyMap()): RecordMetadata {
         val record = ProducerRecord<String, Payload>(topic, key, null)
 
         record.headers().apply {
             headers.forEach { (k, v) -> add(k, v.toByteArray()) }
+        }
+
+        return producer.send(record).get()
+    }
+
+    fun tombstone(key: String, headers: Headers): RecordMetadata {
+        val record = ProducerRecord<String, Payload>(topic, key, null)
+
+        record.headers().apply {
+            headers.forEach { add(it) }
         }
 
         return producer.send(record).get()
