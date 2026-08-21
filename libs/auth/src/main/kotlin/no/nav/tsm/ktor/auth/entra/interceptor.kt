@@ -21,8 +21,8 @@ fun Route.entraOnBehalfOf(build: Route.() -> Unit): Route {
 }
 
 /**
- * Enables both entra machine token and entra on-behalf-of token. Use call.onBehalfOfUserMaybe() to retrieve
- * the user principal if present, or null if the request was authenticated with a machine token.
+ * Enables both entra machine token and entra on-behalf-of token. Use call.onBehalfOfUserMaybe() to retrieve the user
+ * principal if present, or null if the request was authenticated with a machine token.
  */
 fun Route.entraBoth(build: Route.() -> Unit): Route {
     return authenticate(

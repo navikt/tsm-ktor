@@ -31,9 +31,12 @@ dependencies {
         api("io.netty:netty-resolver-dns:4.2.17.Final")
         api("io.netty:netty-resolver-dns-classes-macos:4.2.17.Final")
         api("io.netty:netty-resolver-dns-native-macos:4.2.17.Final")
+        api("o.netty:netty-codec-http2:4.2.17.Final")
+        api("io.netty:netty-codec:4.2.17.Final")
+        api("io.netty:netty-codec-http:4.2.17.Final")
         api("io.netty:netty-codec-dns:4.2.17.Final")
-        api("io.netty:netty-handler-proxy:4.2.17.Final")
         api("io.netty:netty-codec-socks:4.2.17.Final")
+        api("io.netty:netty-handler-proxy:4.2.17.Final")
     }
 
     implementation(ktorLibs.client.contentNegotiation)
