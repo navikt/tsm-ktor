@@ -23,6 +23,19 @@ dependencies {
     api(libs.slf4j)
     api(libs.micrometer.registry.prometheus)
 
+    // Force alignment of Netty artifacts only pulled in transitively via
+    // reactor-netty (through r2dbc-postgresql) to the newer Netty version
+    // ktor-server-netty already resolves elsewhere, to avoid CVEs in the
+    // older 4.1.x line (e.g. netty-resolver-dns / netty-codec-dns).
+    constraints {
+        implementation("io.netty:netty-resolver-dns:4.2.17.Final")
+        implementation("io.netty:netty-resolver-dns-classes-macos:4.2.17.Final")
+        implementation("io.netty:netty-resolver-dns-native-macos:4.2.17.Final")
+        implementation("io.netty:netty-codec-dns:4.2.17.Final")
+        implementation("io.netty:netty-handler-proxy:4.2.17.Final")
+        implementation("io.netty:netty-codec-socks:4.2.17.Final")
+    }
+
     implementation(ktorLibs.client.contentNegotiation)
     implementation(ktorLibs.serialization.jackson3)
 
