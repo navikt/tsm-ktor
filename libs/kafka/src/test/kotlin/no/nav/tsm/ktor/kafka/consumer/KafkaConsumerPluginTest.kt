@@ -15,7 +15,6 @@ import no.nav.tsm.ktor.kafka.test.send
 import no.nav.tsm.ktor.kafka.test.yeet
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.RecordMetadata
-import org.junit.jupiter.api.TestInstance
 
 private data class MyRecord(
     val sykmeldingId: String,

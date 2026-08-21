@@ -12,6 +12,7 @@ import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import no.nav.tsm.ktor.auth.entra.obo.EntraOnBehalfOfUser
 import no.nav.tsm.ktor.auth.entra.obo.onBehalfOfUser
+import no.nav.tsm.ktor.auth.entra.obo.onBehalfOfUserMaybe
 
 class EntraAuthPluginTest {
 
@@ -107,6 +108,32 @@ class EntraAuthPluginTest {
 
         principal.shouldNotBeNull()
         principal.name shouldEqual "Stub User"
+    }
+
+    @Test
+    fun `entraBoth should work with on-behalf-of`() = testApplication {
+        install(EntraAuth) {
+            machine = true
+            obo = true
+            autoStub = true
+        }
+
+        var principal: EntraOnBehalfOfUser? = null
+        routing {
+            entraBoth {
+                get("/both") {
+                    principal = call.onBehalfOfUserMaybe()
+
+                    call.respondText("Authenticated OBO")
+                }
+            }
+        }
+
+        val client = createClient {}
+        client.get("/both").status shouldEqual HttpStatusCode.OK
+
+        principal.shouldNotBeNull()
+        principal?.name shouldEqual "Stub User"
     }
 
     @Test

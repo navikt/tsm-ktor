@@ -23,6 +23,8 @@ fun RoutingCall.onBehalfOfUser(): EntraOnBehalfOfUser =
         "No principal found on route ${this.route.path}, are you securing your routes with  entraOnBehalfOf { ... }?"
     }
 
+fun RoutingCall.onBehalfOfUserMaybe(): EntraOnBehalfOfUser? = this.principal<EntraOnBehalfOfUser>()
+
 internal fun JWTCredential.toEntraOnBehalfOfUser(): EntraOnBehalfOfUser {
     val oid = payload.getClaim("oid").asString()
     val name = payload.getClaim("name").asString()
