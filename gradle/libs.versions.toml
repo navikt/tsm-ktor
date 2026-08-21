@@ -5,9 +5,10 @@ jackson = "3.2.2"
 # Core
 otel = "2.31.0"
 slf4j = "2.0.18"
-logback = "1.6.3"
 prometheus = "1.17.0"
 khealth = "3.0.2"
+logback = "1.6.3"
+logback-encoder = "9.0"
 
 # Kafka
 kafka = "4.3.1"
@@ -26,10 +27,12 @@ mockk = "1.14.11"
 # Core
 otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "otel" }
 slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin", version.ref = "jackson"}
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "prometheus" }
 khealth = { module = "dev.hayden:khealth", version.ref = "khealth" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logback-encoder"}
+
 
 # Kafka
 kafka-client = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }

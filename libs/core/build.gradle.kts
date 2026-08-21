@@ -22,6 +22,8 @@ dependencies {
     api(libs.khealth)
     api(libs.slf4j)
     api(libs.micrometer.registry.prometheus)
+    api(libs.logback.classic)
+    api(libs.logback.encoder)
 
     // Force alignment of Netty artifacts only pulled in transitively via
     // reactor-netty (through r2dbc-postgresql) to the newer Netty version
