@@ -14,10 +14,12 @@ version = file("../version").readText().trim()
 
 dependencies {
     api(platform(ktorLibs.bom))
-    api(ktorLibs.client.core)
+    api(ktorLibs.serialization.jackson3)
     api(ktorLibs.server.di)
     api(ktorLibs.server.metrics.micrometer)
     api(ktorLibs.server.callId)
+    api(ktorLibs.client.core)
+    api(ktorLibs.client.contentNegotiation)
     api(libs.otel.annotations)
     api(libs.khealth)
     api(libs.slf4j)
@@ -40,9 +42,6 @@ dependencies {
         api("io.netty:netty-codec-socks:4.2.17.Final")
         api("io.netty:netty-handler-proxy:4.2.17.Final")
     }
-
-    implementation(ktorLibs.client.contentNegotiation)
-    implementation(ktorLibs.serialization.jackson3)
 
     testImplementation(libs.mockk)
     testImplementation(ktorLibs.server.testHost)
