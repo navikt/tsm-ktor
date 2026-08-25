@@ -19,6 +19,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.WakeupException
+import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.JacksonModule
 
 internal class KafkaConsumerJobConfig(
@@ -27,6 +28,7 @@ internal class KafkaConsumerJobConfig(
     val retryDuration: Duration,
     val closeTimeout: Duration,
     val jacksonModules: MutableList<JacksonModule> = mutableListOf(),
+    val jacksonDeserializationConfig: List<Pair<DeserializationFeature, Boolean>> = emptyList(),
 )
 
 /** Startable and stoppable consumer with manual committing and retry-mechanisms. */
@@ -56,7 +58,16 @@ private constructor(
     }
 
     private val topics = handlers.map { it.topic }
-    private val objectMapper = kafkaObjectMapper.rebuild().addModules(jobConfig.jacksonModules).build()
+    private val objectMapper =
+        kafkaObjectMapper
+            .rebuild()
+            .apply {
+                jobConfig.jacksonDeserializationConfig.forEach { (feature, enabled) ->
+                    this@apply.configure(feature, enabled)
+                }
+            }
+            .addModules(jobConfig.jacksonModules)
+            .build()
     private val stopped = CompletableDeferred<Unit>()
     private val stopping: Boolean
         get() = stopped.isCompleted
@@ -105,7 +116,9 @@ private constructor(
                         unsubscribeAndRetry("Parsing of record (${ex.meta.description()}) failed", ex)
                     } catch (ex: KafkaHandlerException) {
                         unsubscribeAndRetry(
-                            "Handling of record(s) (count: ${ex.meta.size}) (first: ${ex.meta.first().description()}) failed",
+                            "Handling of record(s) (count: ${ex.meta.size}) (first: ${
+                                ex.meta.first().description()
+                            }) failed",
                             ex,
                         )
                     } catch (ex: Exception) {

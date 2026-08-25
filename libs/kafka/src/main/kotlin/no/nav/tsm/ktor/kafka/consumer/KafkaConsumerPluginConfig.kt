@@ -3,6 +3,7 @@ package no.nav.tsm.ktor.kafka.consumer
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.JacksonModule
 import tools.jackson.databind.ObjectMapper
 
@@ -18,9 +19,14 @@ class KafkaConsumerPluginConfig {
     var shutdownTimeout: Duration = 10.seconds // shutdown timeout for KafkaConsumerPlugin
     val topics: MutableList<KafkaTopic<*>> = mutableListOf()
     val jacksonModules: MutableList<JacksonModule> = mutableListOf()
+    val jacksonDeserializationConfig: MutableList<Pair<DeserializationFeature, Boolean>> = mutableListOf()
 
     fun jacksonModule(vararg module: JacksonModule) {
         jacksonModules += module
+    }
+
+    fun jacksonDeserialization(vararg config: Pair<DeserializationFeature, Boolean>) {
+        jacksonDeserializationConfig += config
     }
 
     inline fun <reified RecordType : Any> consume(

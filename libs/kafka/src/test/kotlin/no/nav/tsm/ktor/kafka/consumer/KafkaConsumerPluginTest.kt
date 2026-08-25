@@ -15,11 +15,13 @@ import no.nav.tsm.ktor.kafka.test.send
 import no.nav.tsm.ktor.kafka.test.yeet
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.RecordMetadata
+import tools.jackson.databind.DeserializationFeature
 
 private data class MyRecord(
     val sykmeldingId: String,
     val someOthervalue: String,
     val hasManyValues: Boolean,
+    val nullableThing: List<String>?,
 )
 
 class KafkaTest {
@@ -71,8 +73,8 @@ class KafkaTest {
 
         verify(timeout = 5000) { tombstoneMock(any()) }
         verifyOrder {
-            recordMock(MyRecord("124", "abc", true))
-            recordMock(MyRecord("125", "abc", true))
+            recordMock(MyRecord("124", "abc", true, null))
+            recordMock(MyRecord("125", "abc", true, null))
             tombstoneMock(match { it.key == "test-key" })
         }
 
@@ -130,7 +132,7 @@ class KafkaTest {
 
         verify(timeout = 5000) { tombstoneMock(any()) }
         verifyOrder {
-            recordMock(MyRecord("124", "abc", true))
+            recordMock(MyRecord("124", "abc", true, null))
             tombstoneMock(match { it.key == "test-key" })
         }
 
@@ -269,7 +271,7 @@ class KafkaTest {
 
         verify(timeout = 5000) { recordsMock(any()) }
         verifyOrder {
-            recordsMock(listOf(MyRecord("124", "abc", true), MyRecord("125", "abc", true), null))
+            recordsMock(listOf(MyRecord("124", "abc", true, null), MyRecord("125", "abc", true, null), null))
         }
 
         eventually(5.seconds) {
@@ -391,8 +393,8 @@ class KafkaTest {
                 value = null,
             )
 
-        verify(timeout = 5000) { recordOneMock(MyRecord("124", "abc", true)) }
-        verify(timeout = 5000) { recordTwoMock(MyRecord("124", "abc", true)) }
+        verify(timeout = 5000) { recordOneMock(MyRecord("124", "abc", true, null)) }
+        verify(timeout = 5000) { recordTwoMock(MyRecord("124", "abc", true, null)) }
         verify(timeout = 5000) { tombOneMock(match { it.key == "test-key" }) }
         verify(timeout = 5000) { tombOneMock(match { it.key == "test-key" }) }
 
@@ -484,7 +486,7 @@ class KafkaTest {
                 value = """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true}""".toByteArray(),
             )
 
-        verify(timeout = 5000) { recordMock(MyRecord("124", "abc", true)) }
+        verify(timeout = 5000) { recordMock(MyRecord("124", "abc", true, null)) }
         verify {
             metaMock(match { it.topic == "example-topic" && it.partition == 0 && it.offset >= 0L })
         }
@@ -493,6 +495,42 @@ class KafkaTest {
             val offset = kafka.getOffset("example-topic", "test-group-id")
             offset shouldEqual (lastRecord.offset() + 1L)
         }
+    }
+
+    @Test
+    fun `configuring jackson deserialization through plugin should work`() = testApplication {
+        kafka.configureKafka(this)
+
+        val recordMock = mockk<(MyRecord) -> Unit>(relaxed = true)
+        install(KafkaConsumer) {
+            clientId = "test-client-id"
+            groupId = "test-group-id"
+            pollDuration = 1.seconds
+            retryDuration = 1.seconds
+
+            consume<MyRecord>(
+                name = "example-topic",
+                onTombstone = {},
+                onRecord = { value, _ ->
+                    recordMock(value)
+                },
+            )
+
+            // Allows "" to be coerced into nullable lists/
+            jacksonDeserialization(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT to true)
+        }
+
+        startApplication()
+
+        producer.send(
+            topic = "example-topic",
+            key = "test-key",
+            value =
+                """{"sykmeldingId":"124","someOthervalue":"abc","hasManyValues":true, "nullableThing": ""}"""
+                    .toByteArray(),
+        )
+
+        verify(timeout = 5000) { recordMock(MyRecord("124", "abc", true, null)) }
     }
 
     @Test

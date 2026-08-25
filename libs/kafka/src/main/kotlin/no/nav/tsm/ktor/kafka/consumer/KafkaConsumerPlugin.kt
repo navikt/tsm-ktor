@@ -38,6 +38,7 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                             retryDuration = pluginConfig.retryDuration,
                             closeTimeout = pluginConfig.closeTimeout,
                             jacksonModules = pluginConfig.jacksonModules.toMutableList(),
+                            jacksonDeserializationConfig = pluginConfig.jacksonDeserializationConfig.toMutableList(),
                         ),
                 )
 
