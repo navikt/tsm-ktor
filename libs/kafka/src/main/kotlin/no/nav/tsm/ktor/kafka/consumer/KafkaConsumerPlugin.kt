@@ -37,7 +37,6 @@ val KafkaConsumer: ApplicationPlugin<KafkaConsumerPluginConfig>
                             pollDuration = pluginConfig.pollDuration,
                             retryDuration = pluginConfig.retryDuration,
                             closeTimeout = pluginConfig.closeTimeout,
-                            shutdownTimeout = pluginConfig.shutdownTimeout,
                             jacksonModules = pluginConfig.jacksonModules.toMutableList(),
                         ),
                 )

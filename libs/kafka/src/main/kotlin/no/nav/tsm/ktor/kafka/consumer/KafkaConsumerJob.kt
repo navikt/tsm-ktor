@@ -26,7 +26,6 @@ internal class KafkaConsumerJobConfig(
     val pollDuration: Duration,
     val retryDuration: Duration,
     val closeTimeout: Duration,
-    val shutdownTimeout: Duration,
     val jacksonModules: MutableList<JacksonModule> = mutableListOf(),
 )
 
