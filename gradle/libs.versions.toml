@@ -14,7 +14,7 @@ logback-encoder = "9.0"
 kafka = "4.3.1"
 
 # Kafka Sykmeldinger
-tsm-sykmeldinger-input = "29"
+tsm-sykmeldinger-input = "30"
 
 # Testing
 kotest-assertions = "6.2.4"
