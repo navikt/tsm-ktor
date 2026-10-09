@@ -77,6 +77,9 @@ sealed interface KafkaTopic<RecordType : Any> {
                 try {
                     value?.let { objectMapper.readValue(value, jacksonRef) }
                 } catch (e: Exception) {
+                    // If shouldSkip is defined, and invokes to true, exit handleRecord without throwing so the offset is commited.
+                    shouldSkip?.invoke(meta).let { skip -> if (skip == true) return }
+
                     throw KafkaParseException(meta, e)
                 }
 
@@ -104,6 +107,9 @@ sealed interface KafkaTopic<RecordType : Any> {
                 try {
                     value?.let { objectMapper.readValue(value, jacksonRef) }
                 } catch (e: Exception) {
+                    // If shouldSkip is defined, and invokes to true, exit handleRecord without throwing so the offset is commited.
+                    shouldSkip?.invoke(meta).let { skip -> if (skip == true) return }
+
                     throw KafkaParseException(meta, e)
                 }
 
