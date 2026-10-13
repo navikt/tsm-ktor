@@ -33,7 +33,7 @@ class KafkaConsumerPluginConfig {
         name: String,
         noinline onRecord: suspend (RecordType) -> Unit,
         noinline onTombstone: suspend (RecordMeta) -> Unit,
-        noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
+        noinline shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)? = null,
     ) {
         topics += onRecord(name, onRecord, onTombstone, shouldSkip)
     }
@@ -42,7 +42,7 @@ class KafkaConsumerPluginConfig {
         name: String,
         noinline onRecord: suspend (RecordType, RecordMeta) -> Unit,
         noinline onTombstone: suspend (RecordMeta) -> Unit,
-        noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
+        noinline shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)? = null,
     ) {
         topics += onRecord(name, onRecord, onTombstone, shouldSkip)
     }
@@ -60,7 +60,7 @@ sealed interface KafkaTopic<RecordType : Any> {
 
     interface Unbatched<RecordType : Any> : KafkaTopic<RecordType> {
         val onTombstone: suspend (RecordMeta) -> Unit
-        val shouldSkip: (suspend (RecordMeta) -> Boolean)?
+        val shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)?
 
         suspend fun handleRecord(value: ByteArray?, meta: RecordMeta, objectMapper: ObjectMapper)
     }
@@ -70,17 +70,13 @@ sealed interface KafkaTopic<RecordType : Any> {
         val onRecord: suspend (RecordType) -> Unit,
         override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
-        override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
+        override val shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)?,
     ) : Unbatched<RecordType> {
         override suspend fun handleRecord(value: ByteArray?, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed: RecordType? =
                 try {
                     value?.let { objectMapper.readValue(value, jacksonRef) }
                 } catch (e: Exception) {
-                    // If shouldSkip is defined, and invokes to true, exit handleRecord without throwing so the offset
-                    // is commited.
-                    shouldSkip?.invoke(meta).let { skip -> if (skip == true) return }
-
                     throw KafkaParseException(meta, e)
                 }
 
@@ -101,17 +97,13 @@ sealed interface KafkaTopic<RecordType : Any> {
         val onRecord: suspend (value: RecordType, meta: RecordMeta) -> Unit,
         override val onTombstone: suspend (RecordMeta) -> Unit,
         val jacksonRef: TypeReference<RecordType>,
-        override val shouldSkip: (suspend (RecordMeta) -> Boolean)?,
+        override val shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)?,
     ) : Unbatched<RecordType> {
         override suspend fun handleRecord(value: ByteArray?, meta: RecordMeta, objectMapper: ObjectMapper) {
             val parsed: RecordType? =
                 try {
                     value?.let { objectMapper.readValue(value, jacksonRef) }
                 } catch (e: Exception) {
-                    // If shouldSkip is defined, and invokes to true, exit handleRecord without throwing so the offset
-                    // is commited.
-                    shouldSkip?.invoke(meta).let { skip -> if (skip == true) return }
-
                     throw KafkaParseException(meta, e)
                 }
 

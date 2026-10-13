@@ -128,7 +128,7 @@ class KafkaConsumerDirectTest {
                         handling.complete(Unit)
                         delay(30.seconds)
                     },
-                    shouldSkip = { true },
+                    shouldSkip = { _, _ -> true },
                 )
         ) { _, running ->
             sendTestRecord()

@@ -154,14 +154,15 @@ private constructor(
             } catch (ex: Exception) {
                 currentCoroutineContext().ensureActive()
 
-                if (handler.shouldSkip?.invoke(meta) == true) {
+                if (handler.shouldSkip?.invoke(meta, ex) == true) {
                     logger.info(
                         "Record ${meta.key} on topic ${meta.topic} failed with exception, but shouldSkip returned true, skipping",
                         ex,
                     )
                     commitSync(record.nextOffsets())
+                } else {
+                    throw ex
                 }
-                throw ex
             }
         }
     }

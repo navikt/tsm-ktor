@@ -105,7 +105,7 @@ class KafkaTest {
                 onRecord = { record ->
                     recordMock(record)
                 },
-                shouldSkip = { meta ->
+                shouldSkip = { meta, _ ->
                     meta.key == "test-key-2"
                 },
             )

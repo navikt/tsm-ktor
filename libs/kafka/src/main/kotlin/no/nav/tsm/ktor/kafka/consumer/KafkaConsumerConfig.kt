@@ -6,7 +6,7 @@ inline fun <reified RecordType : Any> onRecord(
     name: String,
     noinline onRecord: suspend (RecordType) -> Unit,
     noinline onTombstone: suspend (RecordMeta) -> Unit,
-    noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
+    noinline shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)? = null,
 ) =
     KafkaTopic.Record(
         topic = name,
@@ -20,7 +20,7 @@ inline fun <reified RecordType : Any> onRecord(
     name: String,
     noinline onRecord: suspend (RecordType, RecordMeta) -> Unit,
     noinline onTombstone: suspend (RecordMeta) -> Unit,
-    noinline shouldSkip: (suspend (RecordMeta) -> Boolean)? = null,
+    noinline shouldSkip: (suspend (RecordMeta, Exception) -> Boolean)? = null,
 ) =
     KafkaTopic.WithMeta(
         topic = name,
