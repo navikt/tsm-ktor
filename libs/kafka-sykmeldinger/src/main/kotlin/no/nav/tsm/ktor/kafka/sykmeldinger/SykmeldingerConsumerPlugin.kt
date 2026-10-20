@@ -11,7 +11,7 @@ val SykmeldingerConsumer =
     createApplicationPlugin(name = "SymfoniSykmeldingerConsumer", ::SykmeldingConsumerPluginConfig) {
         val logger = logger()
 
-        logger.info("Automagic configuration of tsm.sykmeldinge consumer enabled! \uD83D\uDE80")
+        logger.info("Automagic configuration of tsm.sykmeldinger consumer enabled! \uD83D\uDE80")
 
         application.install(KafkaConsumer) {
             clientId = pluginConfig.clientId
