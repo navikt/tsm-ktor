@@ -7,7 +7,7 @@ include(":libs:kafka-test")
 include(":libs:kafka-sykmeldinger")
 include(":libs:catalog")
 
-val ktor = "3.6.0"
+val ktor = "3.6.1"
 
 dependencyResolutionManagement {
     repositories {

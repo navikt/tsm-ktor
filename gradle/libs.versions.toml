@@ -3,11 +3,11 @@ kotlin = "2.4.21"
 jackson = "3.2.4"
 
 # Core
-otel = "2.32.0"
+otel = "2.33.1"
 slf4j = "2.0.20"
 prometheus = "1.17.2"
 khealth = "3.0.2"
-logback = "1.6.5"
+logback = "1.6.6"
 logback-encoder = "9.0"
 
 # Kafka
