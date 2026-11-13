@@ -7,7 +7,7 @@ include(":libs:kafka-test")
 include(":libs:kafka-sykmeldinger")
 include(":libs:catalog")
 
-val ktor = "3.6.0"
+val ktor = "3.6.1"
 
 dependencyResolutionManagement {
     repositories {
@@ -29,5 +29,5 @@ pluginManagement {
 }
 
 plugins {
-    id("io.github.ben-manes.versions.settings") version "0.66.0"
+    id("io.github.ben-manes.versions.settings") version "0.67.0"
 }
