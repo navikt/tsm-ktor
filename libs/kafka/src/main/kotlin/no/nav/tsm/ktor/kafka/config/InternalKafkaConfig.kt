@@ -8,6 +8,7 @@ import java.util.Properties
 import no.nav.tsm.ktor.logger
 import no.nav.tsm.ktor.nais.RuntimeCluster
 import no.nav.tsm.ktor.nais.getRuntimeCluster
+import org.apache.kafka.clients.CommonClientConfigs
 
 private val logger = logger()
 
@@ -19,8 +20,8 @@ internal sealed interface InternalKafkaConfig {
     class Local(override val clientId: String, val bootstrapServers: String = "localhost:9092") : InternalKafkaConfig {
         override fun toProperties() =
             Properties().apply {
-                put("bootstrap.servers", bootstrapServers)
-                put("security.protocol", "PLAINTEXT")
+                put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
+                put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "PLAINTEXT")
             }
     }
 
@@ -31,17 +32,23 @@ internal sealed interface InternalKafkaConfig {
         val truststorePassword: String,
         val keystoreLocation: String,
         val keystorePassword: String,
+        val kafkaSchemaRegistry: String,
+        val kafkaSchemaRegistryUsername: String,
+        val kafkaSchemaRegistryPassword: String,
     ) : InternalKafkaConfig {
         override fun toProperties() =
             Properties().apply {
-                put("bootstrap.servers", bootstrapServers)
-                put("security.protocol", "SSL")
+                put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers)
+                put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SSL")
                 put("ssl.truststore.location", truststoreLocation)
                 put("ssl.truststore.password", truststorePassword)
                 put("ssl.truststore.type", "jks")
                 put("ssl.keystore.location", keystoreLocation)
                 put("ssl.keystore.password", keystorePassword)
                 put("ssl.keystore.type", "PKCS12")
+                put("kafka.schemaRegistry", kafkaSchemaRegistry)
+                put("kafka.schemaRegistry.username", kafkaSchemaRegistryUsername)
+                put("kafka.schemaRegistry.password", kafkaSchemaRegistryPassword)
             }
     }
 
@@ -85,6 +92,9 @@ private fun autoConfig(clientId: String): InternalKafkaConfig =
             truststorePassword = getEnv("KAFKA_CREDSTORE_PASSWORD"),
             keystoreLocation = getEnv("KAFKA_KEYSTORE_PATH"),
             keystorePassword = getEnv("KAFKA_CREDSTORE_PASSWORD"),
+            kafkaSchemaRegistry = getEnv("KAFKA_SCHEMA_REGISTRY"),
+            kafkaSchemaRegistryUsername = getEnv("KAFKA_SCHEMA_REGISTRY_USER"),
+            kafkaSchemaRegistryPassword = getEnv("KAFKA_SCHEMA_REGISTRY_PASSWORD"),
         )
     }
 
