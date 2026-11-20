@@ -1,2 +1,2 @@
 [tools]
-java = "openjdk-25"
+java = "openjdk-21"
