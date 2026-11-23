@@ -67,7 +67,7 @@ tasks.named<Test>("test") {
 tasks {
     configure<SpotlessExtension> {
         kotlin {
-            ktfmt("0.64").kotlinlangStyle().configure {
+            ktfmt(libs.versions.ktfmt.get()).kotlinlangStyle().configure {
                 it.setMaxWidth(120)
                 it.setContinuationIndent(4)
             }
@@ -81,6 +81,7 @@ tasks {
 
 val generateVersionFile =
     tasks.register("generateVersionFile") {
+        description = "generate version file"
         val version = project.version.toString()
         val outputDir = layout.buildDirectory.dir("generated/tsm-ktor")
         outputs.dir(outputDir)

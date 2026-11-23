@@ -228,3 +228,16 @@ val producer = sykmeldingInputProducer()
 producer.send(record)
 producer.tombstone(sykmeldingId)
 ```
+### Upgrading the Gradle wrapper version to latest
+``` bash
+./gradlew :wrapper --gradle-version latest
+```
+
+### Contact
+
+This project is maintained by [navikt/tsm](CODEOWNERS)
+
+Questions and/or feature requests? Please create an [issue](https://github.com/navikt/tsm-ktor/issues)
+
+If you work in [@navikt](https://github.com/navikt) you can reach us at the Slack
+channel [#team-symfoni](https://nav-it.slack.com/archives/C07MY3KCDS5)

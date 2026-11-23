@@ -42,7 +42,7 @@ tasks.named<Test>("test") {
 
 tasks {
     configure<SpotlessExtension> {
-        kotlin { ktfmt("0.64").kotlinlangStyle().configure {
+        kotlin { ktfmt(libs.versions.ktfmt.get()).kotlinlangStyle().configure {
             it.setMaxWidth(120)
             it.setContinuationIndent(4)
         } }
